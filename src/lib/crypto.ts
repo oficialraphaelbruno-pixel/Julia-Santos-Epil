@@ -1,15 +1,27 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from "node:crypto";
 
-/** Chave de 32 bytes derivada de INTEGRATIONS_ENCRYPTION_KEY (somente servidor). */
+/**
+ * Deriva um segredo independente a partir da chave secreta do Supabase (HMAC),
+ * para que a publicação exija apenas UMA variável secreta. Se a variável
+ * específica existir, ela tem prioridade.
+ */
+export function derivedSecret(label: string, explicit?: string) {
+  if (explicit && explicit.length >= 32) return explicit;
+  const base = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  if (!base) return "";
+  return createHmac("sha256", base).update(`studio-manager:${label}:v1`).digest("hex");
+}
+
+/** Chave AES de 32 bytes (somente servidor). */
 function key() {
-  const raw = process.env.INTEGRATIONS_ENCRYPTION_KEY;
-  if (!raw || raw.length < 32) throw new Error("INTEGRATIONS_ENCRYPTION_KEY ausente ou curta (mínimo 32 caracteres).");
+  const raw = derivedSecret("integrations-encryption", process.env.INTEGRATIONS_ENCRYPTION_KEY);
+  if (!raw) throw new Error("Chave de criptografia indisponível (configure SUPABASE_SECRET_KEY).");
   return createHash("sha256").update(raw).digest();
 }
 
 export function hasEncryptionKey() {
-  return (process.env.INTEGRATIONS_ENCRYPTION_KEY ?? "").length >= 32;
+  return derivedSecret("integrations-encryption", process.env.INTEGRATIONS_ENCRYPTION_KEY).length >= 32;
 }
 
 /** AES-256-GCM. Formato: v1.<iv>.<tag>.<dados> (base64url). */

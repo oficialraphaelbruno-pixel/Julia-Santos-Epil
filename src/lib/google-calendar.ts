@@ -27,7 +27,7 @@ export function googleConfig() {
   const missing = [
     !clientId && "GOOGLE_CLIENT_ID",
     !clientSecret && "GOOGLE_CLIENT_SECRET",
-    !hasEncryptionKey() && "INTEGRATIONS_ENCRYPTION_KEY",
+    !hasEncryptionKey() && "SUPABASE_SECRET_KEY",
   ].filter(Boolean) as string[];
   return { clientId, clientSecret, redirectUri, configured: missing.length === 0, missing };
 }

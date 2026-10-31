@@ -2,12 +2,13 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { derivedSecret } from "@/lib/crypto";
 
 /** Identificador anônimo do visitante (hash do IP + segredo). O IP não é armazenado. */
 export async function visitorKey(): Promise<string> {
   const h = await headers();
   const ip = (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "local").trim();
-  const salt = process.env.RATE_LIMIT_SALT ?? "";
+  const salt = derivedSecret("rate-limit", process.env.RATE_LIMIT_SALT);
   return createHash("sha256").update(`${salt}:${ip}`).digest("hex").slice(0, 32);
 }
 
