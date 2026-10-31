@@ -2,6 +2,7 @@
 import { BellRing, CalendarCheck, CalendarClock, CalendarX, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildMessage, whatsappLink, type WhatsTemplate } from "@/lib/whatsapp";
+import type { Templates } from "@/lib/templates";
 
 const ICONS: Record<WhatsTemplate, React.ComponentType<{ className?: string }>> = {
   personalizada: MessageCircle,
@@ -31,6 +32,7 @@ export function WhatsAppActions({
   startsAt,
   tz,
   templates,
+  custom,
 }: {
   phone: string;
   name: string;
@@ -39,13 +41,14 @@ export function WhatsAppActions({
   startsAt?: string;
   tz?: string;
   templates: WhatsTemplate[];
+  custom?: Templates | null;
 }) {
   return (
     <div>
       <div className="flex flex-wrap gap-2">
         {templates.map((t) => {
           const Icon = ICONS[t];
-          const href = whatsappLink(phone, buildMessage(t, { nome: name, servico: service, startsAt, tz, empresa: businessName }));
+          const href = whatsappLink(phone, buildMessage(t, { nome: name, servico: service, startsAt, tz, empresa: businessName }, custom));
           return (
             <Button key={t} asChild size="sm" variant={t === "personalizada" ? "whatsapp" : "outline"}>
               <a href={href} target="_blank" rel="noopener noreferrer" data-testid={`wa-${t}`}>

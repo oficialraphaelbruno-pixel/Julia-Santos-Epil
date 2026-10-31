@@ -19,8 +19,18 @@
 - Configurações: dados, endereço, conteúdo do site, imagens, textos legais, senha, equipe (visualização), exportação CSV, status das integrações.
 - PWA básico (manifesto e ícones; sem promessa de funcionamento offline).
 
+## ✅ Implementadas e testadas (Fase 2)
+- Google Agenda via OAuth 2.0 oficial: conectar, escolher agenda, criar/atualizar/remover eventos de agendamentos confirmados, vínculo agendamento ↔ evento, horários ocupados do Google bloqueiam a agenda online, status da conexão, desconectar (revoga o token), registro de falhas. Tokens criptografados (AES-256-GCM) e acessíveis só pelo servidor. **Lógica testada com respostas simuladas; a conexão real depende das credenciais OAuth.**
+- Se a consulta ao Google falhar, os horários são verificados só na agenda interna e a reserva fica **pendente** (nunca "verificada" indevidamente).
+- E-mails transacionais via SMTP (recebido, confirmação, cancelamento, reagendamento, lembretes) com logomarca e cores; sem duplicidade; registro de cada envio. Testado com entrega real em servidor SMTP local.
+- Lembretes automáticos (véspera; 2h antes com agendador de hora em hora), protegidos por segredo.
+- Modelos de mensagem editáveis (WhatsApp manual e e-mails) com prévia.
+- WhatsApp Business Cloud API (oficial) preparada: só pode ser ativada após envio de teste real.
+- Verificação em duas etapas (TOTP) no login do painel.
+- Histórico do agendamento (alterações, e-mails, sincronização).
+
 ## ⏳ Pendentes
-- Fase 2: Google Agenda (OAuth), e-mails transacionais, WhatsApp Business API (lembretes automáticos), modelos de mensagem editáveis, 2FA no painel.
+- Configuração externa da Fase 2: credenciais OAuth do Google, provedor SMTP e (opcional) WhatsApp Cloud API.
 - Fase 3: Financeiro completo (despesas, estornos, relatórios), pacotes, estoque, relatórios/CRM com gráficos, convite de funcionárias pelo painel.
 - Fase 4: cadastro de outras empresas, painel da plataforma, planos e assinaturas.
 - Publicação: depende de contas na hospedagem, Supabase de produção e domínio (ver `IMPLANTACAO.md`).

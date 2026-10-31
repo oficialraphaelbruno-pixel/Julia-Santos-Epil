@@ -31,6 +31,9 @@ export async function loginAction(_prev: ActionResult | null, formData: FormData
     return { ok: false, error: "Esta conta não tem acesso ao painel." };
   }
 
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") redirect("/admin/verificacao");
+
   const next = String(formData.get("next") ?? "");
   redirect(next.startsWith("/admin/") && !next.startsWith("//") ? next : "/admin");
 }

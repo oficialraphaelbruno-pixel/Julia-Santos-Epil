@@ -9,6 +9,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessagesSquare,
+  Plug,
   Plus,
   Settings,
   Sparkles,
@@ -26,6 +28,8 @@ export const NAV_ITEMS = [
   { href: "/admin/servicos", label: "Serviços", short: "Serviços", icon: Sparkles },
   { href: "/admin/horarios", label: "Horários e bloqueios", short: "Horários", icon: Clock },
   { href: "/admin/agendamento-online", label: "Agendamento Online", short: "Online", icon: Globe },
+  { href: "/admin/comunicacao", label: "Comunicação", short: "Mensagens", icon: MessagesSquare },
+  { href: "/admin/integracoes", label: "Integrações", short: "Integrações", icon: Plug },
   { href: "/admin/configuracoes", label: "Configurações", short: "Config.", icon: Settings },
 ];
 

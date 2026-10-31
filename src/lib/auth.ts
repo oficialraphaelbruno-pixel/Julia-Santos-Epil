@@ -20,6 +20,7 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
   const supabase = await createClient();
   const { data: userData, error } = await supabase.auth.getUser();
   if (error || !userData.user) return null;
+  if (await mfaPending(supabase)) return null;
 
   const { data: membership } = await supabase
     .from("business_members")
@@ -39,8 +40,16 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
   };
 });
 
+/** true quando a usuária tem verificação em duas etapas e ainda não informou o código nesta sessão. */
+async function mfaPending(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return Boolean(data && data.nextLevel === "aal2" && data.currentLevel !== "aal2");
+}
+
 /** Para páginas: redireciona ao login quando não autorizada. */
 export async function requireAdmin(opts: { owner?: boolean } = {}): Promise<AdminContext> {
+  const supabase = await createClient();
+  if (await mfaPending(supabase)) redirect("/admin/verificacao");
   const ctx = await getAdminContext();
   if (!ctx) redirect("/admin/login?erro=acesso");
   if (opts.owner && ctx.role !== "owner") redirect("/admin?erro=permissao");

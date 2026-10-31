@@ -2,6 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { afterAppointmentChange } from "@/lib/appointment-events";
+import { checkSlotAgainstGoogle, filterSlotsByGoogle } from "@/lib/availability";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { getBookingByToken } from "@/lib/manage-booking";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -38,10 +41,11 @@ export async function rescheduleSlotsAction(token: string, day: string): Promise
     p_exclude_appointment_id: booking.id,
     p_online: true,
   });
-  return ((data as { slot_start: string; slot_end: string }[]) ?? []).map((s) => ({
+  const slots = ((data as { slot_start: string; slot_end: string }[]) ?? []).map((s) => ({
     start: new Date(s.slot_start).toISOString(),
     end: new Date(s.slot_end).toISOString(),
   }));
+  return (await filterSlotsByGoogle(booking.business.id, booking.service_id, slots)).slots;
 }
 
 export async function cancelByTokenAction(token: string, reason: string): Promise<ActionResult> {
@@ -52,6 +56,8 @@ export async function cancelByTokenAction(token: string, reason: string): Promis
     p_reason: z.string().max(300).catch("").parse(reason),
   });
   if (error) return { ok: false, error: friendlyDbError(error.message) };
+  const id = await idByToken(token);
+  if (id) after(() => afterAppointmentChange(id, "cancel"));
   revalidatePath(`/agendamento/${token}`);
   return { ok: true, message: "Agendamento cancelado." };
 }
@@ -61,11 +67,22 @@ export async function rescheduleByTokenAction(token: string, newStart: string): 
     return { ok: false, error: "Dados inválidos." };
   }
   if (!(await checkRateLimit("gerenciar", 20, 600))) return { ok: false, error: "Muitas tentativas. Aguarde alguns minutos." };
+  const booking = await getBookingByToken(token);
+  if (booking?.service_id) {
+    const ext = await checkSlotAgainstGoogle(booking.business.id, booking.service_id, newStart);
+    if (ext.busy) return { ok: false, error: friendlyDbError("HORARIO_INDISPONIVEL") };
+  }
   const { error } = await createServiceClient().rpc("reschedule_booking_by_token", {
     p_token_hash: hashToken(token),
     p_new_start: newStart,
   });
   if (error) return { ok: false, error: friendlyDbError(error.message) };
+  if (booking) after(() => afterAppointmentChange(booking.id, "reschedule"));
   revalidatePath(`/agendamento/${token}`);
   return { ok: true, message: "Agendamento reagendado." };
+}
+
+async function idByToken(token: string) {
+  const { data } = await createServiceClient().from("appointments").select("id").eq("manage_token_hash", hashToken(token)).maybeSingle();
+  return data?.id as string | undefined;
 }

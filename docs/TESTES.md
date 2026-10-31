@@ -29,3 +29,20 @@ Nenhum resultado abaixo foi simulado; integrações externas não configuradas e
 | 14 | Dados de uma empresa não acessíveis a outra | ✅ | testes SQL com duas empresas e duas usuárias |
 
 Extra: recuperação de senha por e-mail testada de ponta a ponta (servidor de e-mail local Mailpit).
+
+# Fase 2 — resultados
+
+| Suite | Comando | Resultado |
+|---|---|---|
+| Unitários (inclui criptografia de tokens e lógica do Google com respostas **simuladas**) | `npm test` | 22/22 ✅ |
+| Fase 1 (regressão) | `npm run test:e2e` | 14/14 ✅ |
+| Fase 2 no navegador | `npm run test:e2e:fase2` | 7/7 ✅ |
+
+Fase 2 verificada de verdade (servidor SMTP local, sem simulação):
+- E-mail ao agendar (com link de gerenciamento e logomarca), ao confirmar e ao cancelar.
+- Modelos editáveis aplicados aos botões de WhatsApp.
+- Lembretes: rota recusa acesso sem segredo (401); véspera enviada uma única vez em execuções repetidas.
+- Verificação em duas etapas: sem código o painel fica bloqueado; código errado recusado.
+- Tela de Integrações mostra o estado real (Google: aguardando credenciais).
+
+**TESTE 10 (Google Agenda real): pendente** até a configuração das credenciais OAuth. Nada foi simulado como "conectado".

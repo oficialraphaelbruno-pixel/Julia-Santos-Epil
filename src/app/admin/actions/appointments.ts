@@ -2,6 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { afterAppointmentChange, type AppointmentEvent } from "@/lib/appointment-events";
+import { filterSlotsByGoogle } from "@/lib/availability";
 import { assertAdmin } from "@/lib/auth";
 import { friendlyDbError } from "@/lib/constants";
 import { localToUtcIso, parseMoneyToCents } from "@/lib/format";
@@ -39,6 +42,11 @@ export async function saveAppointmentAction(input: AppointmentInput): Promise<Ac
     const priceCents = v.price ? parseMoneyToCents(v.price) : null;
     if (v.price && priceCents === null) return { ok: false, error: "Valor inválido.", fieldErrors: { price: "Valor inválido" } };
 
+    let previous: { starts_at: string; status: string } | null = null;
+    if (v.id) {
+      const { data: prev } = await ctx.supabase.from("appointments").select("starts_at, status").eq("id", v.id).maybeSingle();
+      previous = prev;
+    }
     const { data, error } = await ctx.supabase.rpc("admin_save_appointment", {
       p_business_id: ctx.business.id,
       p_appointment_id: v.id ?? null,
@@ -52,8 +60,16 @@ export async function saveAppointmentAction(input: AppointmentInput): Promise<Ac
       p_allow_outside_hours: v.allowOutsideHours,
     });
     if (error) return { ok: false, error: friendlyDbError(error.message) };
-    refresh(data as string);
-    return { ok: true, data: { id: data as string }, message: v.id ? "Agendamento atualizado." : "Agendamento criado." };
+    const id = data as string;
+    const newStart = localToUtcIso(v.date, v.time, ctx.business.timezone);
+    let event: AppointmentEvent = "update";
+    if (!previous) event = v.status === "confirmed" ? "confirm" : "update";
+    else if (v.status === "cancelled" && previous.status !== "cancelled") event = "cancel";
+    else if (Date.parse(previous.starts_at) !== Date.parse(newStart)) event = "reschedule";
+    else if (v.status === "confirmed" && previous.status !== "confirmed") event = "confirm";
+    after(() => afterAppointmentChange(id, event));
+    refresh(id);
+    return { ok: true, data: { id }, message: v.id ? "Agendamento atualizado." : "Agendamento criado." };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro ao salvar." };
   }
@@ -69,6 +85,8 @@ export async function setAppointmentStatusAction(id: string, status: z.infer<typ
       p_reason: (reason ?? "").slice(0, 300),
     });
     if (error) return { ok: false, error: friendlyDbError(error.message) };
+    const event: AppointmentEvent = status === "confirmed" ? "confirm" : status === "cancelled" ? "cancel" : "update";
+    after(() => afterAppointmentChange(id, event));
     refresh(id);
     return { ok: true };
   } catch (e) {
@@ -86,7 +104,11 @@ export async function adminSlotsAction(serviceId: string, date: string, excludeI
     p_exclude_appointment_id: excludeId && z.uuid().safeParse(excludeId).success ? excludeId : null,
     p_online: false,
   });
-  return ((data as { slot_start: string }[]) ?? []).map((s) => new Date(s.slot_start).toISOString());
+  const slots = ((data as { slot_start: string; slot_end: string }[]) ?? []).map((s) => ({
+    start: new Date(s.slot_start).toISOString(),
+    end: new Date(s.slot_end).toISOString(),
+  }));
+  return (await filterSlotsByGoogle(ctx.business.id, serviceId, slots)).slots.map((s) => s.start);
 }
 
 const paymentSchema = z.object({

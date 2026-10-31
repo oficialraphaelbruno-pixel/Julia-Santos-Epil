@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarSync, Download, Mail, MessageCircle, ShieldCheck, Users } from "lucide-react";
+import { CalendarSync, Download, Mail, ShieldCheck, Users } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { ProfileForm } from "@/components/admin/profile-form";
 import { BusinessImageField } from "@/components/admin/business-image-field";
 import { LegalForm } from "@/components/admin/legal-form";
 import { PasswordForm } from "@/components/admin/password-form";
+import { MfaManager } from "@/components/admin/mfa-manager";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import { defaultPrivacyPolicy, defaultTerms } from "@/lib/legal-defaults";
@@ -61,24 +62,19 @@ export default async function SettingsPage() {
 
       <section id="integracoes" className="mt-8 scroll-mt-20">
         <h2 className="mb-3 font-display text-xl">Integrações</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="card-premium p-5">
-            <MessageCircle className="size-5 text-gold" />
-            <p className="mt-3 font-medium">WhatsApp</p>
-            <p className="mt-1 text-[13px] text-emerald-700">Ativo · modo manual (wa.me)</p>
-            <p className="mt-2 text-[12.5px] text-muted">Mensagens prontas abrem no seu WhatsApp para envio. Envio automático (API oficial) previsto para a Fase 2.</p>
-          </div>
-          <div className="card-premium p-5">
-            <CalendarSync className="size-5 text-gold" />
-            <p className="mt-3 font-medium">Google Agenda</p>
-            <p className="mt-1 text-[13px] text-muted">Não conectado · Fase 2</p>
-            <p className="mt-2 text-[12.5px] text-muted">A agenda interna funciona normalmente. A cliente já pode adicionar o horário ao calendário dela (link Google ou arquivo .ics).</p>
-          </div>
-          <div className="card-premium p-5">
-            <Mail className="size-5 text-gold" />
-            <p className="mt-3 font-medium">E-mail transacional</p>
-            <p className="mt-1 text-[13px] text-muted">Não configurado · Fase 2</p>
-            <p className="mt-2 text-[12.5px] text-muted">Nenhum e-mail de confirmação é enviado às clientes até a integração ser configurada.</p>
+        <div className="card-premium flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <p className="flex items-center gap-3 text-sm text-ink/80">
+            <CalendarSync className="size-5 text-gold" /> Google Agenda, e-mail e WhatsApp automático
+          </p>
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/admin/integracoes">Integrações</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/admin/comunicacao">
+                <Mail /> Comunicação
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -119,7 +115,7 @@ export default async function SettingsPage() {
             <ShieldCheck className="size-4 text-emerald-600" /> Conectada como <b className="font-medium">{ctx.email}</b>
           </p>
           <PasswordForm />
-          <p className="text-[12.5px] text-muted">Autenticação em duas etapas (TOTP) já está habilitada na infraestrutura e será ativada no painel em uma próxima etapa.</p>
+          <MfaManager />
         </div>
       </section>
 

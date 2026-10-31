@@ -1,6 +1,9 @@
 "use server";
 
 import { z } from "zod";
+import { after } from "next/server";
+import { afterAppointmentChange } from "@/lib/appointment-events";
+import { checkSlotAgainstGoogle, filterSlotsByGoogle } from "@/lib/availability";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { getPublicBusiness } from "@/lib/public-data";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -48,10 +51,11 @@ export async function getAvailableSlotsAction(slug: string, serviceId: string, d
     p_online: true,
   });
   if (error) return [];
-  return ((data as { slot_start: string; slot_end: string }[]) ?? []).map((s) => ({
+  const slots = ((data as { slot_start: string; slot_end: string }[]) ?? []).map((s) => ({
     start: new Date(s.slot_start).toISOString(),
     end: new Date(s.slot_end).toISOString(),
   }));
+  return (await filterSlotsByGoogle(business.id, serviceId, slots)).slots;
 }
 
 export interface BookingCreated {
@@ -84,6 +88,12 @@ export async function createBookingAction(input: {
   const business = await getPublicBusiness(base.data.slug);
   if (!business) return { ok: false, error: "Empresa não encontrada." };
 
+  // Agenda externa (Google): recusa conflito; se a consulta falhar, o pedido fica pendente.
+  const external = await checkSlotAgainstGoogle(business.id, base.data.serviceId, base.data.startsAt);
+  if (external.busy) {
+    return { ok: false, error: friendlyDbError("HORARIO_INDISPONIVEL"), fieldErrors: { _code: "HORARIO_INDISPONIVEL" } };
+  }
+
   const { token, hash } = newManageToken();
   const db = createServiceClient();
   const { data, error } = await db.rpc("create_online_booking", {
@@ -103,5 +113,14 @@ export async function createBookingAction(input: {
     return { ok: false, error: friendlyDbError(error.message), ...(code ? { fieldErrors: { _code: code } } : {}) };
   }
   const row = (data as { appointment_id: string; reference_code: string; status: "pending" | "confirmed" }[])[0];
-  return { ok: true, data: { reference: row.reference_code, token, status: row.status } };
+  let status = row.status;
+  if (!external.externalVerified && status === "confirmed") {
+    await db
+      .from("appointments")
+      .update({ status: "pending", confirmed_at: null, notes: "Confirmação manual: não foi possível verificar o Google Agenda no momento da reserva." })
+      .eq("id", row.appointment_id);
+    status = "pending";
+  }
+  after(() => afterAppointmentChange(row.appointment_id, "booking", { manageToken: token }));
+  return { ok: true, data: { reference: row.reference_code, token, status } };
 }

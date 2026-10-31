@@ -85,7 +85,7 @@ export function BusinessSite({
             {business.photo_url ? (
               <div className="animate-fade-up relative mx-auto w-full max-w-[22rem] [animation-delay:150ms] md:max-w-[26rem]">
                 <div className="absolute -inset-3 translate-x-3 translate-y-3 rounded-t-full rounded-b-[2rem] border border-champagne/60" aria-hidden />
-                <div className="relative aspect-[1459/2000] overflow-hidden rounded-t-full rounded-b-[2rem] bg-cream shadow-lift">
+                <div className="relative aspect-[697/907] overflow-hidden rounded-t-full rounded-b-[2rem] bg-cream shadow-lift">
                   <Image
                     src={business.photo_url}
                     alt={`Foto de ${business.name}`}

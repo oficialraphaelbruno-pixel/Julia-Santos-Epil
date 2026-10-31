@@ -14,6 +14,8 @@ import { getProfessionals } from "@/lib/admin-data";
 import { centsToInput, formatDate, formatDuration, formatLongDate, formatMoney, formatTime, toLocalDateKey } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import type { Appointment, Service } from "@/lib/types";
+import type { Templates } from "@/lib/templates";
+import { STATUS_LABEL, type AppointmentStatus } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Agendamento" };
 
@@ -71,6 +73,12 @@ export default async function AppointmentPage({ params, searchParams }: { params
     .eq("appointment_id", a.id)
     .order("paid_at");
   const active = a.status === "pending" || a.status === "confirmed";
+  const [{ data: ns }, { data: history }, { data: messages }, { data: ext }] = await Promise.all([
+    ctx.supabase.from("notification_settings").select("templates").eq("business_id", ctx.business.id).maybeSingle(),
+    ctx.supabase.rpc("appointment_history", { p_appointment_id: a.id }),
+    ctx.supabase.from("message_logs").select("id, channel, template, status, created_at, error").eq("appointment_id", a.id).order("created_at"),
+    ctx.supabase.from("appointment_external_events").select("synced_at").eq("appointment_id", a.id).maybeSingle(),
+  ]);
 
   return (
     <>
@@ -170,6 +178,7 @@ export default async function AppointmentPage({ params, searchParams }: { params
                 service={a.service_name}
                 startsAt={a.starts_at}
                 tz={tz}
+                custom={(ns?.templates as Templates) ?? null}
                 templates={
                   active
                     ? ["personalizada", "confirmacao", "lembrete", "reagendamento"]
@@ -189,11 +198,62 @@ export default async function AppointmentPage({ params, searchParams }: { params
                 tz={tz}
                 isOwner={ctx.role === "owner"}
               />
-              <p className="mt-3 text-[12px] text-muted">Registro manual. Relatórios financeiros completos chegam na Fase 3.</p>
+              <p className="mt-3 text-[12px] text-muted">Registro manual. Veja o Financeiro para relatórios.</p>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Card className="mt-5">
+        <CardContent>
+          <p className="mb-3 font-display text-lg">Histórico</p>
+          <ul className="space-y-2.5 text-[13px]">
+            {((history ?? []) as { created_at: string; action: string; actor: string; details: { status?: { de: AppointmentStatus | null; para: AppointmentStatus }; inicio?: { de: string | null; para: string } } }[]).map((h, i) => {
+              const st = h.details?.status;
+              const ini = h.details?.inicio;
+              const text =
+                h.action === "insert"
+                  ? `Criado (${STATUS_LABEL[st?.para ?? "pending"]})`
+                  : st && st.de !== st.para
+                    ? `${STATUS_LABEL[st.de ?? "pending"]} → ${STATUS_LABEL[st.para]}`
+                    : ini && ini.de && ini.de !== ini.para
+                      ? `Reagendado: ${formatDate(ini.de, tz)} ${formatTime(ini.de, tz)} → ${formatDate(ini.para, tz)} ${formatTime(ini.para, tz)}`
+                      : "Alterado";
+              return (
+                <li key={i} className="flex gap-3">
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-champagne" />
+                  <span className="flex-1">
+                    {text} <span className="text-muted">· {h.actor === "Painel" ? "painel" : "cliente/site"}</span>
+                  </span>
+                  <span className="text-muted">
+                    {formatDate(h.created_at, tz)} {formatTime(h.created_at, tz)}
+                  </span>
+                </li>
+              );
+            })}
+            {(messages ?? []).map((m) => (
+              <li key={`m${m.id}`} className="flex gap-3">
+                <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${m.status === "sent" ? "bg-emerald-500" : "bg-rose-400"}`} />
+                <span className="flex-1">
+                  {m.channel === "email" ? "E-mail" : "WhatsApp automático"} ({m.template}) — {m.status === "sent" ? "enviado" : m.status === "failed" ? `falhou: ${m.error ?? ""}` : "não enviado"}
+                </span>
+                <span className="text-muted">
+                  {formatDate(m.created_at, tz)} {formatTime(m.created_at, tz)}
+                </span>
+              </li>
+            ))}
+            {ext ? (
+              <li className="flex gap-3">
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sky-500" />
+                <span className="flex-1">Sincronizado com o Google Agenda</span>
+                <span className="text-muted">
+                  {formatDate(ext.synced_at, tz)} {formatTime(ext.synced_at, tz)}
+                </span>
+              </li>
+            ) : null}
+          </ul>
+        </CardContent>
+      </Card>
     </>
   );
 }

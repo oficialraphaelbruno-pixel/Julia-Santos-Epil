@@ -11,6 +11,7 @@ import { requireAdmin } from "@/lib/auth";
 import { formatDate, formatDateKey, formatDateTime, formatMoney, nowMs } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import type { Appointment, Client } from "@/lib/types";
+import type { Templates } from "@/lib/templates";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -30,6 +31,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const now = nowMs();
   const upcoming = history.filter((a) => new Date(a.starts_at).getTime() > now && ["pending", "confirmed"].includes(a.status)).reverse();
   const past = history.filter((a) => !upcoming.includes(a));
+  const { data: ns } = await supabase.from("notification_settings").select("templates").eq("business_id", business.id).maybeSingle();
   const c = client as Client & { last_visit: string | null; completed_count: number; total_spent_cents: number; marketing_consent_at: string | null };
   const inactive = c.last_visit && now - new Date(c.last_visit).getTime() > 90 * 864e5 && upcoming.length === 0;
 
@@ -105,6 +107,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                 phone={c.phone}
                 name={c.full_name}
                 businessName={business.name}
+                custom={(ns?.templates as Templates) ?? null}
                 templates={upcoming[0] ? ["personalizada", "confirmacao", "lembrete"] : ["personalizada"]}
                 service={upcoming[0]?.service_name}
                 startsAt={upcoming[0]?.starts_at}
