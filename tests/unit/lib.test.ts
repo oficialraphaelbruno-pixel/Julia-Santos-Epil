@@ -99,3 +99,24 @@ describe("validação e mensagens", () => {
     expect(friendlyDbError("new row violates row-level security policy")).toMatch(/permissão/);
   });
 });
+
+import { buildPixPayload, crc16, normalizePixKey } from "@/lib/pix";
+describe("Pix copia e cola", () => {
+  it("CRC16 confere com o exemplo oficial do Banco Central", () => {
+    const body =
+      "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Fulano de Tal6008BRASILIA62070503***6304";
+    expect(crc16(body)).toBe("1D3D");
+  });
+  it("gera payload com valor, recebedor e txid", () => {
+    const p = buildPixPayload({ key: "+5531998628886", name: "Julia Caroline Pereira dos Santos", amountCents: 4250, txid: "AG-ABC123" });
+    expect(p).toContain("0014br.gov.bcb.pix0114+5531998628886");
+    expect(p).toContain("540542.50");
+    expect(p).toContain("5925JULIA CAROLINE PEREIRA D");
+    expect(p).toContain("0508AGABC123");
+    expect(crc16(p.slice(0, -4))).toBe(p.slice(-4));
+  });
+  it("normaliza chave de celular", () => {
+    expect(normalizePixKey("31 99862-8886", "telefone")).toBe("+5531998628886");
+    expect(normalizePixKey("123", "cpf")).toBeNull();
+  });
+});

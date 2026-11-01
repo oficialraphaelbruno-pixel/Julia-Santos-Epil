@@ -118,6 +118,8 @@ async function bookingUntilReview(ctx, { name, phone, dayIndex = 0, slotIndex = 
   await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByRole("button", { name: "Confirmar agendamento" }).waitFor();
+  const terms = p.getByTestId("terms-checkbox");
+  if (await terms.count()) await terms.check();
   return { p, time };
 }
 

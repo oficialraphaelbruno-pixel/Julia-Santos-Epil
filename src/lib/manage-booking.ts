@@ -20,6 +20,9 @@ export interface ManagedBooking {
   settings: PublicSettings;
   canCancel: boolean;
   canReschedule: boolean;
+  deposit_cents: number;
+  deposit_status: string;
+  deposit_due_at: string | null;
 }
 
 /** Busca o agendamento pelo token (somente o hash é consultado no banco). */
@@ -29,7 +32,7 @@ export async function getBookingByToken(token: string): Promise<ManagedBooking |
   const { data } = await db
     .from("appointments")
     .select(
-      "id, business_id, reference_code, status, starts_at, ends_at, service_id, service_name, price_cents, duration_minutes, client:clients(full_name), professional:professionals(display_name), business:businesses(slug)",
+      "id, business_id, reference_code, status, starts_at, ends_at, service_id, service_name, price_cents, duration_minutes, deposit_cents, deposit_status, deposit_due_at, client:clients(full_name), professional:professionals(display_name), business:businesses(slug)",
     )
     .eq("manage_token_hash", hashToken(token))
     .maybeSingle();
@@ -58,6 +61,9 @@ export async function getBookingByToken(token: string): Promise<ManagedBooking |
     professionalName: (data.professional as unknown as { display_name: string } | null)?.display_name ?? null,
     business,
     settings,
+    deposit_cents: data.deposit_cents,
+    deposit_status: data.deposit_status,
+    deposit_due_at: data.deposit_due_at,
     canCancel: active && settings.allow_client_cancel && hoursUntil >= settings.cancel_min_hours,
     canReschedule: active && !!data.service_id && settings.allow_client_reschedule && hoursUntil >= settings.reschedule_min_hours,
   };

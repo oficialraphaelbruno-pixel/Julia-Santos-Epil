@@ -45,6 +45,15 @@ export interface BookingSettings {
   reschedule_min_hours: number;
   cancellation_policy: string | null;
   max_active_bookings_per_client: number;
+  deposit_enabled: boolean;
+  deposit_percent: number;
+  deposit_deadline_hours: number;
+  pix_key: string | null;
+  pix_key_type: string | null;
+  pix_holder_name: string | null;
+  pix_bank: string | null;
+  pix_city: string | null;
+  deposit_instructions: string | null;
 }
 
 export interface Service {
@@ -63,6 +72,8 @@ export interface Service {
   show_online: boolean;
   is_combo: boolean;
   sort_order: number;
+  pre_care_text: string | null;
+  post_care_text: string | null;
 }
 
 export interface Category {
@@ -110,7 +121,13 @@ export interface Appointment {
   cancelled_by: string | null;
   reschedule_count: number;
   created_at: string;
+  deposit_cents: number;
+  deposit_status: DepositStatus;
+  deposit_due_at: string | null;
+  deposit_paid_at: string | null;
 }
+
+export type DepositStatus = "nao_exigido" | "aguardando" | "pago" | "dispensado" | "devolvido";
 
 export interface WorkingHour {
   id: string;

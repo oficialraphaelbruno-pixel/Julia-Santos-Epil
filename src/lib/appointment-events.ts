@@ -6,10 +6,11 @@ import { sendWhatsappTemplate, whatsappCloudConfig } from "@/lib/whatsapp-cloud"
 import { renderTemplate, type TemplateKey, type Templates } from "@/lib/templates";
 import { businessAddress } from "@/lib/public-data";
 import { formatDate, formatDuration, formatMoney, formatTime } from "@/lib/format";
+import { PIX_KEY_TYPE_LABEL, formatPixKey } from "@/lib/pix";
 import { SITE_URL } from "@/lib/env";
 import { formatPhone } from "@/lib/phone";
 
-export type AppointmentEvent = "booking" | "confirm" | "cancel" | "reschedule" | "update" | "reminder_day_before" | "reminder_2h";
+export type AppointmentEvent = "booking" | "confirm" | "cancel" | "reschedule" | "update" | "complete" | "reminder_day_before" | "reminder_2h";
 
 const GOOGLE_STATUSES = ["confirmed", "in_progress", "completed"];
 
@@ -24,6 +25,9 @@ interface Loaded {
   duration_minutes: number;
   reference_code: string;
   notes: string | null;
+  deposit_cents: number;
+  deposit_status: string;
+  service: { pre_care_text: string | null; post_care_text: string | null } | null;
   client: { full_name: string; phone: string; email: string | null } | null;
   business: {
     name: string;
@@ -45,7 +49,7 @@ async function load(appointmentId: string) {
   const { data } = await db
     .from("appointments")
     .select(
-      "id, business_id, status, starts_at, ends_at, service_name, price_cents, duration_minutes, reference_code, notes, client:clients(full_name, phone, email), business:businesses(name, slug, timezone, logo_url, whatsapp_phone, email, address_line, address_district, address_city, address_state, address_zip)",
+      "id, business_id, status, starts_at, ends_at, service_name, price_cents, duration_minutes, reference_code, notes, deposit_cents, deposit_status, service:services(pre_care_text, post_care_text), client:clients(full_name, phone, email), business:businesses(name, slug, timezone, logo_url, whatsapp_phone, email, address_line, address_district, address_city, address_state, address_zip)",
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -108,10 +112,13 @@ export async function syncAppointmentToGoogle(appointmentId: string) {
   }
 }
 
-function templateFor(event: AppointmentEvent, status: string): TemplateKey | null {
+function templateFor(event: AppointmentEvent, status: string, depositStatus: string): TemplateKey | null {
   switch (event) {
     case "booking":
+      if (depositStatus === "aguardando") return "sinal";
       return status === "confirmed" ? "confirmacao" : "recebido";
+    case "complete":
+      return "orientacoes_pos";
     case "confirm":
       return "confirmacao";
     case "cancel":
@@ -132,14 +139,19 @@ const SUBJECTS: Record<TemplateKey, string> = {
   lembrete: "Lembrete do seu atendimento",
   cancelamento: "Agendamento cancelado",
   reagendamento: "Agendamento reagendado",
+  sinal: "Seu horário está reservado — falta o sinal",
+  orientacoes_pre: "Orientações para o seu atendimento",
+  orientacoes_pos: "Cuidados após o seu atendimento 💛",
 };
 
 /** Envia as comunicações automáticas configuradas (e-mail e, se ativado, WhatsApp oficial). */
 export async function notifyAppointment(appointmentId: string, event: AppointmentEvent, opts: { manageToken?: string } = {}) {
   const a = await load(appointmentId);
   if (!a || !a.client) return;
-  const key = templateFor(event, a.status);
+  const key = templateFor(event, a.status, a.deposit_status);
   if (!key) return;
+  // Pós-procedimento só é enviado se o serviço tiver orientações cadastradas.
+  if (key === "orientacoes_pos" && !a.service?.post_care_text) return;
   const db = createServiceClient();
   const { data: settings } = await db.from("notification_settings").select("*").eq("business_id", a.business_id).maybeSingle();
   if (!settings) return;
@@ -150,17 +162,38 @@ export async function notifyAppointment(appointmentId: string, event: Appointmen
     cancel: settings.email_on_cancel,
     reschedule: settings.email_on_reschedule,
     update: false,
+    complete: settings.email_on_confirm,
     reminder_day_before: settings.email_reminder_day_before,
     reminder_2h: settings.email_reminder_2h,
   };
   const dedupe = (channel: string) => `${a.id}:${channel}:${event}:${a.starts_at}`;
   const manageUrl = opts.manageToken ? `${SITE_URL}/agendamento/${opts.manageToken}` : undefined;
   const tz = a.business.timezone;
+  const { data: bs } = await db
+    .from("booking_settings")
+    .select("pix_key, pix_key_type, pix_holder_name, pix_bank")
+    .eq("business_id", a.business_id)
+    .maybeSingle();
+  const pixText = bs?.pix_key
+    ? `Chave (${PIX_KEY_TYPE_LABEL[bs.pix_key_type ?? ""] ?? "Pix"}): ${formatPixKey(bs.pix_key, bs.pix_key_type)}${bs.pix_holder_name ? `\nFavorecida: ${bs.pix_holder_name}` : ""}${bs.pix_bank ? `\nBanco: ${bs.pix_bank}` : ""}`
+    : "";
   const text = renderTemplate(
     key,
-    { nome: a.client.full_name, servico: a.service_name, startsAt: a.starts_at, tz, empresa: a.business.name, link: manageUrl },
+    {
+      nome: a.client.full_name,
+      servico: a.service_name,
+      startsAt: a.starts_at,
+      tz,
+      empresa: a.business.name,
+      link: manageUrl,
+      sinal: formatMoney(a.deposit_cents),
+      pix: pixText,
+      orientacoes: (key === "orientacoes_pos" ? a.service?.post_care_text : a.service?.pre_care_text) ?? "",
+    },
     settings.templates as Templates,
   );
+  // Orientações pré-procedimento acompanham a confirmação.
+  const preCare = (key === "confirmacao" || key === "sinal" || key === "recebido") && a.service?.pre_care_text ? a.service.pre_care_text : null;
 
   async function already(channel: string) {
     const { count } = await db.from("message_logs").select("id", { count: "exact", head: true }).eq("dedupe_key", dedupe(channel)).eq("status", "sent");
@@ -187,13 +220,14 @@ export async function notifyAppointment(appointmentId: string, event: Appointmen
       businessName: a.business.name,
       logoUrl: a.business.logo_url,
       title: SUBJECTS[key],
-      message: text,
+      message: preCare ? `${text}\n\nOrientações para o seu atendimento:\n${preCare}` : text,
       details: [
         ["Serviço", a.service_name],
         ["Data", formatDate(a.starts_at, tz)],
         ["Horário", `${formatTime(a.starts_at, tz)} às ${formatTime(a.ends_at, tz)}`],
         ["Duração", formatDuration(a.duration_minutes)],
         ["Referência", a.reference_code],
+        ...(a.deposit_status === "aguardando" ? ([["Sinal (Pix)", formatMoney(a.deposit_cents)]] as [string, string][]) : []),
         ...(address ? ([["Endereço", address]] as [string, string][]) : []),
       ],
       ctaLabel: manageUrl ? "Gerenciar meu agendamento" : undefined,
@@ -204,7 +238,7 @@ export async function notifyAppointment(appointmentId: string, event: Appointmen
       to: a.client.email,
       subject: `${SUBJECTS[key]} — ${a.business.name}`,
       html,
-      text: manageUrl ? `${text}\n\nGerenciar: ${manageUrl}` : text,
+      text: `${preCare ? `${text}\n\nOrientações para o seu atendimento:\n${preCare}` : text}${manageUrl ? `\n\nGerenciar: ${manageUrl}` : ""}`,
       replyTo: settings.email_reply_to ?? a.business.email,
       fromName: a.business.name,
     });

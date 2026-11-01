@@ -5,6 +5,10 @@ import { ArrowLeft, CalendarClock, Globe, MessageSquareText, NotebookPen, UserRo
 import { AppointmentForm } from "@/components/admin/appointment-form";
 import { AppointmentStatusActions } from "@/components/admin/appointment-actions";
 import { PaymentPanel, type PaymentRow } from "@/components/admin/payment-panel";
+import { DepositPanel } from "@/components/admin/deposit-panel";
+import { PIX_KEY_TYPE_LABEL, formatPixKey } from "@/lib/pix";
+import { nowMs } from "@/lib/format";
+import type { WhatsTemplate } from "@/lib/whatsapp";
 import { WhatsAppActions } from "@/components/admin/whatsapp-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,12 +77,27 @@ export default async function AppointmentPage({ params, searchParams }: { params
     .eq("appointment_id", a.id)
     .order("paid_at");
   const active = a.status === "pending" || a.status === "confirmed";
-  const [{ data: ns }, { data: history }, { data: messages }, { data: ext }] = await Promise.all([
+  const [{ data: ns }, { data: history }, { data: messages }, { data: ext }, { data: svcCare }, { data: bs }] = await Promise.all([
     ctx.supabase.from("notification_settings").select("templates").eq("business_id", ctx.business.id).maybeSingle(),
     ctx.supabase.rpc("appointment_history", { p_appointment_id: a.id }),
     ctx.supabase.from("message_logs").select("id, channel, template, status, created_at, error").eq("appointment_id", a.id).order("created_at"),
     ctx.supabase.from("appointment_external_events").select("synced_at").eq("appointment_id", a.id).maybeSingle(),
+    a.service_id
+      ? ctx.supabase.from("services").select("pre_care_text, post_care_text").eq("id", a.service_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    ctx.supabase.from("booking_settings").select("pix_key, pix_key_type, pix_holder_name, pix_bank").eq("business_id", ctx.business.id).maybeSingle(),
   ]);
+  const pixText = bs?.pix_key
+    ? `Chave (${PIX_KEY_TYPE_LABEL[bs.pix_key_type ?? ""] ?? "Pix"}): ${formatPixKey(bs.pix_key, bs.pix_key_type)}${bs.pix_holder_name ? `\nFavorecida: ${bs.pix_holder_name}` : ""}${bs.pix_bank ? `\nBanco: ${bs.pix_bank}` : ""}`
+    : "";
+  const waTemplates: WhatsTemplate[] = active
+    ? ["personalizada", "confirmacao", "lembrete", "reagendamento"]
+    : a.status === "cancelled"
+      ? ["personalizada", "cancelamento"]
+      : ["personalizada"];
+  if (active && a.deposit_status === "aguardando") waTemplates.splice(1, 0, "sinal");
+  if (active && svcCare?.pre_care_text) waTemplates.push("orientacoes_pre");
+  if (a.status === "completed" && svcCare?.post_care_text) waTemplates.push("orientacoes_pos");
 
   return (
     <>
@@ -179,16 +198,27 @@ export default async function AppointmentPage({ params, searchParams }: { params
                 startsAt={a.starts_at}
                 tz={tz}
                 custom={(ns?.templates as Templates) ?? null}
-                templates={
-                  active
-                    ? ["personalizada", "confirmacao", "lembrete", "reagendamento"]
-                    : a.status === "cancelled"
-                      ? ["personalizada", "cancelamento"]
-                      : ["personalizada"]
-                }
+                templates={waTemplates}
+                extra={{ sinal: formatMoney(a.deposit_cents), pix: pixText, preCare: svcCare?.pre_care_text, postCare: svcCare?.post_care_text }}
               />
             </CardContent>
           </Card>
+          {a.deposit_status !== "nao_exigido" ? (
+            <Card className={a.deposit_status === "aguardando" ? "border-amber-300" : ""}>
+              <CardContent>
+                <DepositPanel
+                  appointmentId={a.id}
+                  amountCents={a.deposit_cents}
+                  status={a.deposit_status}
+                  dueAt={a.deposit_due_at}
+                  paidAt={a.deposit_paid_at}
+                  appointmentStatus={a.status}
+                  tz={tz}
+                  overdue={Boolean(a.deposit_due_at && Date.parse(a.deposit_due_at) < nowMs())}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
           <Card>
             <CardContent>
               <PaymentPanel

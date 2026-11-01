@@ -47,7 +47,7 @@ export default async function DashboardPage() {
   const ctx = await requireAdmin();
   const tz = ctx.business.timezone;
   const today = todayKey(tz);
-  const [{ data: dash }, { data: upcoming }, { count: servicesCount }, { count: openDays }] = await Promise.all([
+  const [{ data: dash }, { data: upcoming }, { count: servicesCount }, { count: openDays }, { data: deposits }] = await Promise.all([
     ctx.supabase.rpc("admin_dashboard", { p_business_id: ctx.business.id }),
     ctx.supabase
       .from("appointments")
@@ -59,7 +59,17 @@ export default async function DashboardPage() {
       .limit(8),
     ctx.supabase.from("services").select("id", { count: "exact", head: true }).eq("business_id", ctx.business.id).eq("status", "active"),
     ctx.supabase.from("working_hours").select("id", { count: "exact", head: true }).eq("business_id", ctx.business.id).eq("is_open", true),
+    ctx.supabase
+      .from("appointments")
+      .select("id, starts_at, deposit_cents, deposit_due_at, client:clients(full_name)")
+      .eq("business_id", ctx.business.id)
+      .eq("deposit_status", "aguardando")
+      .eq("status", "pending")
+      .gte("starts_at", new Date().toISOString())
+      .order("starts_at")
+      .limit(10),
   ]);
+  const pendingDeposits = (deposits ?? []) as unknown as { id: string; starts_at: string; deposit_cents: number; deposit_due_at: string | null; client: { full_name: string } | null }[];
   const d = (dash ?? {}) as Dashboard;
   const bookingUrl = `${SITE_URL}/agendar/${ctx.business.slug}`;
   const firstName = ctx.business.name.split(" ")[0];
@@ -115,6 +125,26 @@ export default async function DashboardPage() {
                   <Link href={s.href} className="flex items-center gap-3 text-sm hover:text-gold-dark">
                     {s.done ? <CheckCircle2 className="size-5 text-emerald-600" /> : <Circle className="size-5 text-champagne" />}
                     <span className={s.done ? "text-muted line-through" : "text-ink"}>{s.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {pendingDeposits.length ? (
+        <Card className="mb-6 border-amber-300 bg-amber-50/40" data-testid="pending-deposits">
+          <CardContent>
+            <p className="font-display text-lg">Sinais aguardando Pix ({pendingDeposits.length})</p>
+            <p className="text-sm text-muted">Confira o recebimento no banco e marque como recebido no agendamento.</p>
+            <ul className="mt-3 divide-y divide-amber-200/70">
+              {pendingDeposits.map((d) => (
+                <li key={d.id}>
+                  <Link href={`/admin/agenda/${d.id}`} className="flex items-center gap-3 py-2.5 text-sm hover:opacity-80">
+                    <span className="flex-1 truncate font-medium">{d.client?.full_name}</span>
+                    <span className="text-muted">{formatDateKey(toLocalDateKey(d.starts_at, tz), "dd/MM")} {formatTime(d.starts_at, tz)}</span>
+                    <span className="font-medium text-gold-deep">{formatMoney(d.deposit_cents)}</span>
                   </Link>
                 </li>
               ))}

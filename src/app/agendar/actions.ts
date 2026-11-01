@@ -12,6 +12,8 @@ import { friendlyDbError } from "@/lib/constants";
 import { clientBookingSchema, dateKeySchema, slugSchema } from "@/lib/schemas";
 import type { ActionResult } from "@/lib/action";
 import { zodFieldErrors } from "@/lib/action";
+import { buildDepositInfo, type DepositInfo } from "@/lib/pix-server";
+import { getPublicBookingData } from "@/lib/public-data";
 
 export interface Slot {
   start: string;
@@ -62,6 +64,7 @@ export interface BookingCreated {
   reference: string;
   token: string;
   status: "pending" | "confirmed";
+  deposit: DepositInfo | null;
 }
 
 export async function createBookingAction(input: {
@@ -87,6 +90,10 @@ export async function createBookingAction(input: {
 
   const business = await getPublicBusiness(base.data.slug);
   if (!business) return { ok: false, error: "Empresa não encontrada." };
+  const { settings } = await getPublicBookingData(business.id);
+  if (settings?.deposit_enabled && !parsed.data.terms) {
+    return { ok: false, error: "É necessário aceitar os Termos de Uso e as regras do sinal.", fieldErrors: { terms: "Aceite os termos para continuar" } };
+  }
 
   // Agenda externa (Google): recusa conflito; se a consulta falhar, o pedido fica pendente.
   const external = await checkSlotAgainstGoogle(business.id, base.data.serviceId, base.data.startsAt);
@@ -113,7 +120,12 @@ export async function createBookingAction(input: {
     return { ok: false, error: friendlyDbError(error.message), ...(code ? { fieldErrors: { _code: code } } : {}) };
   }
   const row = (data as { appointment_id: string; reference_code: string; status: "pending" | "confirmed" }[])[0];
-  let status = row.status;
+  const { data: saved } = await db
+    .from("appointments")
+    .select("status, deposit_cents, deposit_status, deposit_due_at")
+    .eq("id", row.appointment_id)
+    .single();
+  let status = (saved?.status ?? row.status) as "pending" | "confirmed";
   if (!external.externalVerified && status === "confirmed") {
     await db
       .from("appointments")
@@ -122,5 +134,16 @@ export async function createBookingAction(input: {
     status = "pending";
   }
   after(() => afterAppointmentChange(row.appointment_id, "booking", { manageToken: token }));
-  return { ok: true, data: { reference: row.reference_code, token, status } };
+  const deposit =
+    saved && saved.deposit_status === "aguardando" && settings
+      ? await buildDepositInfo({
+          amountCents: saved.deposit_cents,
+          status: saved.deposit_status,
+          dueAt: saved.deposit_due_at,
+          reference: row.reference_code,
+          settings,
+          fallbackCity: business.address_city,
+        })
+      : null;
+  return { ok: true, data: { reference: row.reference_code, token, status, deposit } };
 }

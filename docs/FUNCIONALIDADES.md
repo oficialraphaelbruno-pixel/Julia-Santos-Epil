@@ -34,3 +34,12 @@
 - Fase 3: Financeiro completo (despesas, estornos, relatórios), pacotes, estoque, relatórios/CRM com gráficos, convite de funcionárias pelo painel.
 - Fase 4: cadastro de outras empresas, painel da plataforma, planos e assinaturas.
 - Publicação: depende de contas na hospedagem, Supabase de produção e domínio (ver `IMPLANTACAO.md`).
+
+## ✅ Sinal via Pix e orientações (novembro/2026)
+- Sinal configurável (padrão 50%) cobrado no agendamento online, com Pix copia e cola e QR code no padrão do Banco Central (valor, favorecida e referência do agendamento).
+- A cliente precisa aceitar os Termos de Uso (com as regras do sinal) para concluir; o aceite fica registrado.
+- O horário fica **pendente** até a Julia marcar "Sinal recebido" (lança o pagamento no financeiro e confirma o agendamento). Também é possível dispensar o sinal ou registrar a devolução (estorno).
+- Painel de Controle lista os sinais aguardando Pix; agenda mostra "Sinal pendente".
+- Orientações pré e pós-procedimento por serviço: as pré acompanham a confirmação; as pós são enviadas ao concluir o atendimento (e-mail + botão de WhatsApp).
+- Configuração em Agendamento Online → "Cobrar sinal via Pix" (chave, favorecida, banco, porcentagem e prazo).
+- **Não há verificação automática do Pix**: o recebimento é confirmado manualmente pela Julia (Pix estático não notifica o sistema).

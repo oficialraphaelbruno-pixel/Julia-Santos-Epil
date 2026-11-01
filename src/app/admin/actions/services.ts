@@ -23,6 +23,8 @@ const serviceSchema = z.object({
   isCombo: z.boolean(),
   comboItems: z.array(z.uuid()).optional().default([]),
   imageUrl: z.string().max(500).optional().nullable(),
+  preCare: z.string().trim().max(3000).optional().default(""),
+  postCare: z.string().trim().max(3000).optional().default(""),
 });
 export type ServiceInput = z.input<typeof serviceSchema>;
 
@@ -64,6 +66,8 @@ export async function saveServiceAction(input: ServiceInput): Promise<ActionResu
       show_online: v.showOnline,
       is_combo: v.isCombo,
       image_url: v.imageUrl || null,
+      pre_care_text: v.preCare || null,
+      post_care_text: v.postCare || null,
     };
 
     const { data, error } = v.id

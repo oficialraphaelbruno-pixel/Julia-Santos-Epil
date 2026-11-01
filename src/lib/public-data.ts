@@ -24,6 +24,15 @@ export type PublicSettings = Pick<
   | "allow_client_reschedule"
   | "reschedule_min_hours"
   | "cancellation_policy"
+  | "deposit_enabled"
+  | "deposit_percent"
+  | "deposit_deadline_hours"
+  | "pix_key"
+  | "pix_key_type"
+  | "pix_holder_name"
+  | "pix_bank"
+  | "pix_city"
+  | "deposit_instructions"
 >;
 
 export const getPublicBusiness = cache(async (slug: string) => {
@@ -39,7 +48,7 @@ export const getPublicBookingData = cache(async (businessId: string) => {
     db
       .from("booking_settings")
       .select(
-        "online_enabled, intro_text, auto_confirm, min_advance_minutes, max_advance_days, allow_client_cancel, cancel_min_hours, allow_client_reschedule, reschedule_min_hours, cancellation_policy",
+        "online_enabled, intro_text, auto_confirm, min_advance_minutes, max_advance_days, allow_client_cancel, cancel_min_hours, allow_client_reschedule, reschedule_min_hours, cancellation_policy, deposit_enabled, deposit_percent, deposit_deadline_hours, pix_key, pix_key_type, pix_holder_name, pix_bank, pix_city, deposit_instructions",
       )
       .eq("business_id", businessId)
       .single(),

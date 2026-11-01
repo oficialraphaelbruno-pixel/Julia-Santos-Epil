@@ -46,3 +46,11 @@ Fase 2 verificada de verdade (servidor SMTP local, sem simulação):
 - Tela de Integrações mostra o estado real (Google: aguardando credenciais).
 
 **TESTE 10 (Google Agenda real): pendente** até a configuração das credenciais OAuth. Nada foi simulado como "conectado".
+
+# Sinal via Pix — resultados
+| Suite | Resultado |
+|---|---|
+| Unitários (inclui CRC do Pix validado com o exemplo oficial do Banco Central) | 25/25 ✅ |
+| Banco: sinal de 50%, pendente até confirmação, reagendamento não confirma sozinho | ✅ |
+| `npm run test:e2e:sinal` (navegador + e-mails reais no SMTP local) | 4/4 ✅ |
+| Regressão Fase 1 / Fase 2 | 14/14 ✅ · 7/7 ✅ |

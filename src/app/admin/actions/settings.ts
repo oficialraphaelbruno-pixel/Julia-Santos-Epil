@@ -6,6 +6,7 @@ import { assertAdmin } from "@/lib/auth";
 import { friendlyDbError } from "@/lib/constants";
 import { normalizeBrazilPhone } from "@/lib/phone";
 import { SUPABASE_URL } from "@/lib/env";
+import { normalizePixKey } from "@/lib/pix";
 import { zodFieldErrors, type ActionResult } from "@/lib/action";
 
 const text = (max: number) => z.string().trim().max(max).optional().default("").transform((v) => (v ? v : null));
@@ -35,6 +36,15 @@ const bookingSchema = z.object({
   rescheduleMinHours: z.coerce.number().int().min(0).max(720),
   cancellationPolicy: text(2000),
   maxActive: z.coerce.number().int().min(1).max(20),
+  depositEnabled: z.boolean(),
+  depositPercent: z.coerce.number().int().min(1).max(100),
+  depositDeadlineHours: z.coerce.number().int().min(1).max(168),
+  pixKeyType: z.enum(["telefone", "cpf", "cnpj", "email", "aleatoria"]),
+  pixKey: z.string().trim().max(120).optional().default(""),
+  pixHolder: text(120),
+  pixBank: text(80),
+  pixCity: text(40),
+  depositInstructions: text(1000),
 });
 export type BookingSettingsInput = z.input<typeof bookingSchema>;
 
@@ -44,9 +54,23 @@ export async function saveBookingSettingsAction(input: BookingSettingsInput): Pr
     const p = bookingSchema.safeParse(input);
     if (!p.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(p.error.issues) };
     const v = p.data;
+    const pixKey = v.pixKey ? normalizePixKey(v.pixKey, v.pixKeyType) : null;
+    if (v.pixKey && !pixKey) return { ok: false, error: "Chave Pix inválida para o tipo escolhido.", fieldErrors: { pixKey: "Chave inválida" } };
+    if (v.depositEnabled && (!pixKey || !v.pixHolder)) {
+      return { ok: false, error: "Para cobrar sinal, informe a chave Pix e o nome da favorecida.", fieldErrors: { pixKey: "Obrigatório" } };
+    }
     const { error } = await ctx.supabase
       .from("booking_settings")
       .update({
+        deposit_enabled: v.depositEnabled,
+        deposit_percent: v.depositPercent,
+        deposit_deadline_hours: v.depositDeadlineHours,
+        pix_key: pixKey,
+        pix_key_type: pixKey ? v.pixKeyType : null,
+        pix_holder_name: v.pixHolder,
+        pix_bank: v.pixBank,
+        pix_city: v.pixCity,
+        deposit_instructions: v.depositInstructions,
         online_enabled: v.onlineEnabled,
         intro_text: v.introText,
         auto_confirm: v.autoConfirm,

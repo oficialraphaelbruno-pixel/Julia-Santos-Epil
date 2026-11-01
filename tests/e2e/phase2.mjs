@@ -44,7 +44,7 @@ const mails = async (to) => {
 const waitMail = async (to, subjectPart, timeout = 15000) => {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
-    const m = (await mails(to)).find((x) => x.Subject.includes(subjectPart));
+    const m = (await mails(to)).find((x) => (subjectPart instanceof RegExp ? subjectPart.test(x.Subject) : x.Subject.includes(subjectPart)));
     if (m) return m;
     await new Promise((r) => setTimeout(r, 500));
   }
@@ -91,16 +91,18 @@ await step("F2.1", "Agendamento online envia e-mail real com link de gerenciamen
   await p.fill("#email", clientEmail);
   await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
+  const terms = p.getByTestId("terms-checkbox");
+  if (await terms.count()) await terms.check();
   await p.getByRole("button", { name: "Confirmar agendamento" }).click();
   await p.getByText("Agendamento realizado com sucesso! ✨").waitFor();
   reference = (await p.getByTestId("booking-reference").textContent()).trim();
   manageHref = await p.getByTestId("manage-link").getAttribute("href");
-  const m = await waitMail(clientEmail, "Recebemos seu agendamento");
+  const m = await waitMail(clientEmail, /Recebemos seu agendamento|falta o sinal/);
   const full = await (await fetch(`${MAILPIT}/api/v1/message/${m.ID}`)).json();
   if (!full.HTML.includes(reference)) throw new Error("referência ausente no e-mail");
   if (!full.HTML.includes(manageHref)) throw new Error("link de gerenciamento ausente");
   if (!full.HTML.includes("julia-santos-logo.png")) throw new Error("logomarca ausente");
-  const log = sql(`select status from message_logs where recipient='${clientEmail}' and template='recebido'`);
+  const log = sql(`select status from message_logs where recipient='${clientEmail}' and template in ('recebido','sinal')`);
   if (log !== "sent") throw new Error(`registro: ${log}`);
   await c.close();
   return `${reference}: "${m.Subject}"`;
@@ -109,8 +111,13 @@ await step("F2.1", "Agendamento online envia e-mail real com link de gerenciamen
 await step("F2.2", "Confirmar no painel envia e-mail de confirmação (sem duplicar)", async () => {
   const id = sql(`select id from appointments where reference_code='${reference}'`);
   await ap.goto(`${BASE}/admin/agenda/${id}`);
-  await ap.getByTestId("btn-confirmar").click();
-  await ap.getByText("Agendamento confirmado.").waitFor();
+  if (await ap.getByTestId("btn-sinal-recebido").count()) {
+    await ap.getByTestId("btn-sinal-recebido").click();
+    await ap.getByText("Sinal registrado e agendamento confirmado.").waitFor();
+  } else {
+    await ap.getByTestId("btn-confirmar").click();
+    await ap.getByText("Agendamento confirmado.").waitFor();
+  }
   await waitMail(clientEmail, "Agendamento confirmado");
   await ap.reload();
   await ap.getByText(/E-mail \(confirmacao\) — enviado/).waitFor();

@@ -20,6 +20,7 @@ import {
 import { BookingCalendar } from "@/components/booking/booking-calendar";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { BrandLogo } from "@/components/site/brand-logo";
+import { DepositCard } from "@/components/booking/deposit-card";
 import { WhatsAppIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
@@ -67,6 +68,8 @@ export function BookingWizard(props: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [result, setResult] = useState<BookingCreated | null>(null);
   const [pending, startTransition] = useTransition();
+  const [termsOk, setTermsOk] = useState(false);
+  const depositRequired = Boolean(settings.deposit_enabled);
 
   const form = useForm<ClientBookingInput>({
     resolver: zodResolver(clientBookingSchema),
@@ -113,7 +116,7 @@ export function BookingWizard(props: Props) {
         slug: business.slug,
         serviceId: service.id,
         startsAt: slot.start,
-        client: form.getValues(),
+        client: { ...form.getValues(), terms: termsOk },
       });
       if (res.ok && res.data) {
         setResult(res.data);
@@ -156,9 +159,11 @@ export function BookingWizard(props: Props) {
         </div>
         <h1 className="mt-7 text-3xl text-ink sm:text-4xl">Agendamento realizado com sucesso! ✨</h1>
         <p className="mt-3 text-muted">
-          {result.status === "confirmed"
-            ? "Seu horário está confirmado. Esperamos por você!"
-            : "Seu pedido foi registrado e aguarda a confirmação do studio. Você será avisada pelo WhatsApp."}
+          {result.deposit
+            ? "Seu horário está reservado. Para confirmá-lo, faça o Pix do sinal abaixo."
+            : result.status === "confirmed"
+              ? "Seu horário está confirmado. Esperamos por você!"
+              : "Seu pedido foi registrado e aguarda a confirmação do studio. Você será avisada pelo WhatsApp."}
         </p>
 
         <div className="mt-8 rounded-3xl border border-line bg-white p-6 text-left shadow-soft">
@@ -170,6 +175,12 @@ export function BookingWizard(props: Props) {
           </div>
           <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} />
         </div>
+
+        {result.deposit ? (
+          <div className="mt-6">
+            <DepositCard deposit={result.deposit} tz={tz} reference={result.reference} whatsapp={business.whatsapp_phone} />
+          </div>
+        ) : null}
 
         <div className="mt-6 rounded-3xl border border-champagne/40 bg-ivory p-5 text-left">
           <p className="flex items-center gap-2 text-sm font-medium text-ink">
@@ -397,10 +408,49 @@ export function BookingWizard(props: Props) {
                 <p className="whitespace-pre-line">{settings.cancellation_policy}</p>
               </div>
             ) : null}
-            {!settings.auto_confirm ? (
+            {depositRequired && service.price_cents > 0 ? (
+              <div className="mt-5 rounded-2xl border border-champagne/60 bg-ivory p-4 text-[14px]" data-testid="deposit-notice">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-medium text-ink">Sinal ({settings.deposit_percent}%) via Pix</span>
+                  <span className="font-display text-xl text-gold-dark">
+                    {formatMoney(Math.round((service.price_cents * settings.deposit_percent) / 100))}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink/70">
+                  Após confirmar, você verá o Pix para pagamento. O horário fica reservado por até {settings.deposit_deadline_hours}h aguardando o
+                  sinal. O restante ({formatMoney(service.price_cents - Math.round((service.price_cents * settings.deposit_percent) / 100))}) é pago
+                  no atendimento.
+                </p>
+              </div>
+            ) : !settings.auto_confirm ? (
               <p className="mt-5 text-[13px] text-muted">Seu horário ficará reservado e o studio confirmará o atendimento.</p>
             ) : null}
-            <Button type="button" size="lg" className="mt-6 w-full" disabled={pending} onClick={submit} data-testid="confirm-booking">
+            {depositRequired ? (
+              <label className="mt-4 flex items-start gap-3 text-sm leading-relaxed text-ink/80">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 accent-[#b68d40]"
+                  checked={termsOk}
+                  onChange={(e) => setTermsOk(e.target.checked)}
+                  data-testid="terms-checkbox"
+                />
+                <span>
+                  Li e aceito os{" "}
+                  <Link href="/termos" target="_blank" className="font-medium text-gold-dark underline underline-offset-2">
+                    Termos de Uso
+                  </Link>
+                  , incluindo as regras do sinal. *
+                </span>
+              </label>
+            ) : null}
+            <Button
+              type="button"
+              size="lg"
+              className="mt-6 w-full"
+              disabled={pending || (depositRequired && !termsOk)}
+              onClick={submit}
+              data-testid="confirm-booking"
+            >
               {pending ? <Loader2 className="animate-spin" /> : <Check />}
               {pending ? "Reservando…" : "Confirmar agendamento"}
             </Button>

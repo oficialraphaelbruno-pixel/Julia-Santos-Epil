@@ -85,7 +85,8 @@ export async function setAppointmentStatusAction(id: string, status: z.infer<typ
       p_reason: (reason ?? "").slice(0, 300),
     });
     if (error) return { ok: false, error: friendlyDbError(error.message) };
-    const event: AppointmentEvent = status === "confirmed" ? "confirm" : status === "cancelled" ? "cancel" : "update";
+    const event: AppointmentEvent =
+      status === "confirmed" ? "confirm" : status === "cancelled" ? "cancel" : status === "completed" ? "complete" : "update";
     after(() => afterAppointmentChange(id, event));
     refresh(id);
     return { ok: true };
@@ -154,6 +155,83 @@ export async function deletePaymentAction(id: string, appointmentId: string): Pr
     if (error) return { ok: false, error: friendlyDbError(error.message) };
     refresh(appointmentId);
     return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}
+
+/** Sinal recebido: registra o pagamento (Pix) e, opcionalmente, confirma o agendamento. */
+export async function confirmDepositAction(appointmentId: string, alsoConfirm: boolean): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin();
+    if (!z.uuid().safeParse(appointmentId).success) return { ok: false, error: "Agendamento inválido." };
+    const { data: a } = await ctx.supabase
+      .from("appointments")
+      .select("id, client_id, status, deposit_cents, deposit_status")
+      .eq("id", appointmentId)
+      .eq("business_id", ctx.business.id)
+      .maybeSingle();
+    if (!a) return { ok: false, error: "Agendamento não encontrado." };
+    if (a.deposit_status !== "aguardando") return { ok: false, error: "Não há sinal pendente neste agendamento." };
+    const { error: payError } = await ctx.supabase.from("payments").insert({
+      business_id: ctx.business.id,
+      appointment_id: a.id,
+      client_id: a.client_id,
+      kind: "pagamento",
+      method: "pix",
+      amount_cents: a.deposit_cents,
+      notes: "Sinal do agendamento",
+      created_by: ctx.userId,
+    });
+    if (payError) return { ok: false, error: friendlyDbError(payError.message) };
+    const { error } = await ctx.supabase
+      .from("appointments")
+      .update({ deposit_status: "pago", deposit_paid_at: new Date().toISOString() })
+      .eq("id", a.id);
+    if (error) return { ok: false, error: friendlyDbError(error.message) };
+    if (alsoConfirm && a.status === "pending") {
+      const { error: stError } = await ctx.supabase.rpc("admin_set_appointment_status", { p_appointment_id: a.id, p_status: "confirmed", p_reason: "" });
+      if (stError) return { ok: false, error: friendlyDbError(stError.message) };
+      after(() => afterAppointmentChange(a.id, "confirm"));
+    }
+    refresh(a.id);
+    return { ok: true, message: alsoConfirm ? "Sinal registrado e agendamento confirmado." : "Sinal registrado." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}
+
+/** Dispensa o sinal (ex.: cliente de confiança) ou marca como devolvido. */
+export async function setDepositStatusAction(appointmentId: string, status: "dispensado" | "devolvido"): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin();
+    if (!z.uuid().safeParse(appointmentId).success || !["dispensado", "devolvido"].includes(status)) return { ok: false, error: "Dados inválidos." };
+    const { data: a } = await ctx.supabase
+      .from("appointments")
+      .select("id, client_id, deposit_cents, deposit_status")
+      .eq("id", appointmentId)
+      .eq("business_id", ctx.business.id)
+      .maybeSingle();
+    if (!a) return { ok: false, error: "Agendamento não encontrado." };
+    if (status === "dispensado" && a.deposit_status !== "aguardando") return { ok: false, error: "O sinal não está pendente." };
+    if (status === "devolvido") {
+      if (a.deposit_status !== "pago") return { ok: false, error: "Só é possível devolver um sinal recebido." };
+      const { error: refundError } = await ctx.supabase.from("payments").insert({
+        business_id: ctx.business.id,
+        appointment_id: a.id,
+        client_id: a.client_id,
+        kind: "estorno",
+        method: "pix",
+        amount_cents: a.deposit_cents,
+        notes: "Devolução do sinal",
+        created_by: ctx.userId,
+      });
+      if (refundError) return { ok: false, error: friendlyDbError(refundError.message) };
+    }
+    const { error } = await ctx.supabase.from("appointments").update({ deposit_status: status }).eq("id", a.id);
+    if (error) return { ok: false, error: friendlyDbError(error.message) };
+    refresh(a.id);
+    return { ok: true, message: status === "dispensado" ? "Sinal dispensado." : "Devolução do sinal registrada." };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro." };
   }

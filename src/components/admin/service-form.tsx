@@ -47,6 +47,8 @@ export function ServiceForm({
       isCombo: service?.is_combo ?? false,
       comboItems: comboItems ?? [],
       imageUrl: service?.image_url ?? null,
+      preCare: service?.pre_care_text ?? "",
+      postCare: service?.post_care_text ?? "",
     },
   });
   const errors = form.formState.errors;
@@ -141,6 +143,19 @@ export function ServiceForm({
             <option value="inactive">Inativo</option>
             <option value="archived">Arquivado</option>
           </Select>
+        </Field>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-line p-4">
+        <p className="text-[13px] text-muted">
+          Orientações enviadas à cliente: as <b>pré</b> acompanham a confirmação; as <b>pós</b> são enviadas ao concluir o atendimento (e-mail e botão de
+          WhatsApp).
+        </p>
+        <Field label="Orientações pré-procedimento" htmlFor="sv-pre">
+          <Textarea id="sv-pre" rows={4} placeholder="Escreva com suas palavras as orientações antes do atendimento." {...form.register("preCare")} />
+        </Field>
+        <Field label="Orientações pós-procedimento" htmlFor="sv-pos">
+          <Textarea id="sv-pos" rows={4} placeholder="Escreva com suas palavras os cuidados após o atendimento." {...form.register("postCare")} />
         </Field>
       </div>
 

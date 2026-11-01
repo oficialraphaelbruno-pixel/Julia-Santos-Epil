@@ -38,6 +38,7 @@ export const clientBookingSchema = z.object({
   message: z.string().trim().max(500, "Máximo de 500 caracteres").optional().default(""),
   privacy: z.literal(true, { error: "É necessário aceitar a Política de Privacidade" }),
   marketing: z.boolean().optional().default(false),
+  terms: z.boolean().optional().default(false),
   website: z.string().max(0).optional(), // honeypot anti-robôs
 });
 export type ClientBookingInput = z.input<typeof clientBookingSchema>;

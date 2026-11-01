@@ -124,6 +124,27 @@ begin
   raise notice 'OK prazo máximo de agendamento respeitado';
 end $$;
 
+-- ---------- Sinal (Pix) ----------
+do $$
+declare v_day date := (select d from t_ctx) + 2; v_r record; v_a public.appointments%rowtype;
+begin
+  update public.booking_settings set deposit_enabled = true, deposit_percent = 50, auto_confirm = true, deposit_deadline_hours = 24
+   where business_id = '00000000-0000-0000-0000-00000000000a';
+  select * into v_r from public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+           (v_day + time '09:00') at time zone 'America/Sao_Paulo', 'Cliente Sinal', '5531999990009', null, false, null, 'hash-sinal');
+  select * into v_a from public.appointments where id = v_r.appointment_id;
+  assert v_a.deposit_cents = 4000, format('sinal deveria ser 4000, foi %s', v_a.deposit_cents);
+  assert v_a.deposit_status = 'aguardando', 'sinal deveria estar aguardando';
+  assert v_a.status = 'pending', 'com sinal pendente o agendamento deve ficar pendente mesmo com confirmação automática';
+  assert v_a.terms_accepted_at is not null, 'aceite dos termos não registrado';
+  assert v_a.deposit_due_at <= v_a.starts_at, 'prazo do sinal após o atendimento';
+  -- reagendar pela cliente mantém pendente
+  perform public.reschedule_booking_by_token('hash-sinal', (v_day + time '10:00') at time zone 'America/Sao_Paulo');
+  assert (select status from public.appointments where id = v_r.appointment_id) = 'pending', 'reagendamento confirmou sem sinal';
+  update public.booking_settings set deposit_enabled = false, auto_confirm = false where business_id = '00000000-0000-0000-0000-00000000000a';
+  raise notice 'OK sinal: 50%% calculado, agendamento pendente até confirmar o Pix';
+end $$;
+
 -- ---------- Teste 14: isolamento entre empresas (RLS) ----------
 insert into public.clients (business_id, full_name, phone)
 values ('00000000-0000-0000-0000-00000000000b', 'Cliente da B', '5511988887777');
@@ -137,7 +158,7 @@ begin
   select count(*) into n from public.clients where business_id = '00000000-0000-0000-0000-00000000000b';
   assert n = 0, 'FALHOU: usuária A enxergou clientes da empresa B';
   select count(*) into n from public.clients;
-  assert n = 2, format('usuária A deveria ver 2 clientes próprias, viu %s', n);
+  assert n = 3, format('usuária A deveria ver 3 clientes próprias, viu %s', n);
   select count(*) into n from public.appointments where business_id = '00000000-0000-0000-0000-00000000000b';
   assert n = 0, 'FALHOU: viu agendamentos de B';
   select count(*) into n from public.businesses;

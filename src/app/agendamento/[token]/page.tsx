@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { CalendarPlus, Download } from "lucide-react";
 import { BookingShell } from "@/components/booking/booking-wizard";
 import { ManageBookingActions } from "@/components/booking/manage-booking";
+import { DepositCard } from "@/components/booking/deposit-card";
+import { buildDepositInfo } from "@/lib/pix-server";
 import { WhatsAppIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
@@ -22,6 +24,17 @@ export default async function ManageBookingPage({ params }: { params: Promise<{ 
   const tz = b.business.timezone;
   const active = b.status === "pending" || b.status === "confirmed";
   const today = todayKey(tz);
+  const deposit =
+    active && b.deposit_status === "aguardando"
+      ? await buildDepositInfo({
+          amountCents: b.deposit_cents,
+          status: b.deposit_status,
+          dueAt: b.deposit_due_at,
+          reference: b.reference_code,
+          settings: b.settings,
+          fallbackCity: b.business.address_city,
+        })
+      : null;
   const waMsg = `Olá! Sobre meu agendamento ${b.reference_code} (${b.service_name}, ${formatDate(b.starts_at, tz)} às ${formatTime(b.starts_at, tz)}):`;
 
   return (
@@ -51,9 +64,20 @@ export default async function ManageBookingPage({ params }: { params: Promise<{ 
             ))}
           </dl>
           {b.status === "pending" ? (
-            <p className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">Aguardando confirmação do studio.</p>
+            <p className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+              {deposit ? "Aguardando o pagamento do sinal para confirmar." : "Aguardando confirmação do studio."}
+            </p>
+          ) : null}
+          {b.deposit_status === "pago" ? (
+            <p className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800">Sinal recebido. Obrigada! 💛</p>
           ) : null}
         </div>
+
+        {deposit ? (
+          <div className="mt-4">
+            <DepositCard deposit={deposit} tz={tz} reference={b.reference_code} whatsapp={b.business.whatsapp_phone} />
+          </div>
+        ) : null}
 
         {active ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

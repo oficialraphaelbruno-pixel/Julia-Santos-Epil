@@ -1,6 +1,6 @@
 import { renderTemplate, type Templates } from "@/lib/templates";
 
-export type WhatsTemplate = "confirmacao" | "lembrete" | "cancelamento" | "reagendamento" | "personalizada";
+export type WhatsTemplate = "confirmacao" | "lembrete" | "cancelamento" | "reagendamento" | "personalizada" | "sinal" | "orientacoes_pre" | "orientacoes_pos";
 
 export const TEMPLATE_LABEL: Record<WhatsTemplate, string> = {
   confirmacao: "Enviar confirmação",
@@ -8,6 +8,9 @@ export const TEMPLATE_LABEL: Record<WhatsTemplate, string> = {
   cancelamento: "Avisar cancelamento",
   reagendamento: "Avisar reagendamento",
   personalizada: "Enviar mensagem",
+  sinal: "Cobrar sinal",
+  orientacoes_pre: "Orientações pré",
+  orientacoes_pos: "Orientações pós",
 };
 
 export interface TemplateData {
@@ -17,11 +20,14 @@ export interface TemplateData {
   tz?: string;
   empresa: string;
   linkGerenciar?: string;
+  sinal?: string;
+  pix?: string;
+  orientacoes?: string;
 }
 
 export function buildMessage(template: WhatsTemplate, d: TemplateData, custom?: Templates | null): string {
   if (template === "personalizada") return `Olá, ${d.nome.trim().split(/\s+/)[0]}! ✨`;
-  return renderTemplate(template, { nome: d.nome, servico: d.servico, startsAt: d.startsAt, tz: d.tz, empresa: d.empresa, link: d.linkGerenciar }, custom);
+  return renderTemplate(template, { nome: d.nome, servico: d.servico, startsAt: d.startsAt, tz: d.tz, empresa: d.empresa, link: d.linkGerenciar, sinal: d.sinal, pix: d.pix, orientacoes: d.orientacoes }, custom);
 }
 
 /** Link oficial wa.me. Apenas abre a conversa; o envio é feito manualmente. */

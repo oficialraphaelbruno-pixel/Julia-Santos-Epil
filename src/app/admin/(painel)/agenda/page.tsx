@@ -30,6 +30,7 @@ interface Row {
   status: AppointmentStatus;
   service_name: string;
   source: "admin" | "online";
+  deposit_status: string;
   client: { full_name: string } | null;
 }
 interface BlockRow {
@@ -74,7 +75,7 @@ export default async function AgendaPage({
 
   let q = ctx.supabase
     .from("appointments")
-    .select("id, starts_at, ends_at, status, service_name, source, client:clients(full_name)")
+    .select("id, starts_at, ends_at, status, service_name, source, deposit_status, client:clients(full_name)")
     .eq("business_id", ctx.business.id)
     .gte("starts_at", fromIso)
     .lt("starts_at", toIso)
@@ -309,6 +310,9 @@ function AppointmentRow({ r, tz }: { r: Row; tz: string }) {
           {r.source === "online" ? <Globe className="ml-1.5 inline size-3 text-gold" aria-label="Agendado pelo site" /> : null}
         </p>
       </div>
+      {r.deposit_status === "aguardando" && r.status === "pending" ? (
+        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">Sinal pendente</span>
+      ) : null}
       <StatusBadge status={r.status} />
     </Link>
   );
