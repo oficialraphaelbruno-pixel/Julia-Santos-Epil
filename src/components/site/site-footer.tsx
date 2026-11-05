@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { InstagramIcon, WhatsAppIcon } from "@/components/site/icons";
@@ -47,8 +48,18 @@ export function SiteFooter({ business }: { business: PublicBusiness }) {
           </ul>
         </div>
       </div>
-      <div className="border-t border-line/60 py-6 text-center text-xs text-muted">
-        © {year} {business.name}. Todos os direitos reservados.
+      <div className="border-t border-line/60 px-5 py-6 text-center text-xs text-muted">
+        <p>© {year} {business.name}. Todos os direitos reservados.</p>
+        <a
+          href="https://www.instagram.com/rb_assessoria.comunica/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-2 text-muted transition hover:text-ink"
+          aria-label="Criado por RB Assessoria & Comunicação (abre o Instagram)"
+        >
+          <span>Criado por</span>
+          <Image src="/brand/rb-assessoria-logo.png" alt="RB Assessoria & Comunicação" width={103} height={22} className="h-[22px] w-auto" />
+        </a>
       </div>
     </footer>
   );
