@@ -38,6 +38,9 @@ export function SiteFooter({ business }: { business: PublicBusiness }) {
           <p className="ornament !justify-start before:hidden">Informações</p>
           <ul className="mt-4 space-y-3 text-sm text-ink/80">
             <li>
+              <Link href={`/agendar/${business.slug}/consultar`} className="hover:text-gold-dark">Consultar meu agendamento</Link>
+            </li>
+            <li>
               <Link href="/privacidade" className="hover:text-gold-dark">Política de Privacidade</Link>
             </li>
             <li>

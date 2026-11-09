@@ -49,3 +49,9 @@
 - **Financeiro**: despesas (com categoria, vencimento, fornecedor, forma de pagamento, comprovante em área privada e repetição mensal para despesas fixas), receitas avulsas, resumo do mês (recebido, despesas, resultado, a receber, previsto, ticket médio, descontos), gráfico de 6 meses, receita por serviço e por forma de pagamento, despesas por categoria, alerta de despesas vencidas e exportação CSV.
 - **Ordem dos serviços e categorias**: setas no painel; o site segue a mesma ordem.
 - **Domínio**: guia em `docs/DOMINIO.md`.
+
+## ✅ Consulta de agendamento pela cliente
+- `/agendar/julia-santos-epil/consultar` (link no topo da página de agendamento e no rodapé do site).
+- A cliente informa **e-mail ou WhatsApp + nome completo** (como no agendamento; acentos e maiúsculas não importam) e vê seus agendamentos futuros: serviço, data, horário, valor, cupom, situação, Pix do sinal pendente e botões "Adicionar ao Google Agenda" / arquivo .ics.
+- Segurança: mensagem genérica quando não encontra (não revela se a cliente existe) e limite de 8 consultas a cada 15 minutos por aparelho. Remarcar/cancelar continua pelo link seguro da confirmação ou pelo WhatsApp.
+- Guia de ativação do Google Agenda exibido na própria tela Integrações.

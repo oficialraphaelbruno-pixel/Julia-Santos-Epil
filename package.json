@@ -14,7 +14,9 @@
     "admin:create": "node --env-file=.env.local scripts/create-admin.mjs",
     "test:db": "psql \"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" -q -v ON_ERROR_STOP=1 -f supabase/tests/booking_rules.test.sql",
     "test:e2e:fase2": "node tests/e2e/phase2.mjs",
-    "test:e2e:sinal": "node tests/e2e/deposit.mjs"
+    "test:e2e:sinal": "node tests/e2e/deposit.mjs",
+    "test:e2e:consulta": "node tests/e2e/consult.mjs",
+    "test:e2e:cupons": "node tests/e2e/coupons-finance.mjs"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

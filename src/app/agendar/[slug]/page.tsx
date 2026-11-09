@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CalendarOff } from "lucide-react";
+import Link from "next/link";
+import { CalendarOff, Search } from "lucide-react";
 import { BookingShell, BookingWizard } from "@/components/booking/booking-wizard";
 import { WhatsAppIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,15 @@ export default async function AgendarPage({
       {settings.intro_text ? (
         <p className="mx-auto mb-8 max-w-2xl text-center text-[15px] leading-relaxed text-ink/70 whitespace-pre-line">{settings.intro_text}</p>
       ) : null}
+      <div className="mx-auto mb-6 flex max-w-2xl justify-end">
+        <Link
+          href={`/agendar/${business.slug}/consultar`}
+          className="inline-flex items-center gap-2 rounded-full border border-champagne/60 bg-white px-4 py-2 text-[13px] font-medium text-gold-dark shadow-soft transition hover:border-gold"
+          data-testid="link-consultar"
+        >
+          <Search className="size-4" /> Já agendei: consultar meu agendamento
+        </Link>
+      </div>
       <BookingWizard
         business={business}
         services={services}

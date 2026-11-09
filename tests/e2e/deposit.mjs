@@ -44,6 +44,8 @@ function crc16(payload) {
   return crc.toString(16).toUpperCase().padStart(4, "0");
 }
 
+// ambiente local: zera o limitador de abuso para a bateria de testes não ser bloqueada
+sql("delete from rate_limits");
 const stamp = Date.now().toString().slice(-5);
 const service = sql(`select name from services where status='active' and show_online order by created_at desc limit 1`);
 sql(`update services set pre_care_text = 'Evite cremes no dia. (teste ${stamp})', post_care_text = 'Evite sol por 24h. (teste ${stamp})' where name = '${service}'`);

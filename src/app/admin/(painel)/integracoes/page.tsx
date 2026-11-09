@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { GoogleIntegrationControls } from "@/components/admin/google-integration";
 import { TestSender } from "@/components/admin/test-sender";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { requireAdmin } from "@/lib/auth";
 import { getConnectionStatus, googleConfig } from "@/lib/google-calendar";
 import { emailConfig } from "@/lib/email";
@@ -94,9 +95,37 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 <a href="/api/integracoes/google/conectar">Conectar Google Agenda</a>
               </Button>
             ) : (
-              <div className="mt-4 rounded-2xl bg-ivory p-4 text-[13px] text-ink/75">
-                Para ativar: crie as credenciais OAuth no Google Cloud (guia em <code>docs/GOOGLE-AGENDA.md</code>) com o endereço de retorno{" "}
-                <code className="break-all">{gcfg.redirectUri}</code> e configure as variáveis no servidor.
+              <div className="mt-4 rounded-2xl bg-ivory p-4 text-[13px] leading-relaxed text-ink/80" data-testid="guia-google">
+                <p className="mb-2 font-medium text-ink">Como ativar (uma única vez, ~15 minutos)</p>
+                <ol className="list-decimal space-y-2 pl-5">
+                  <li>
+                    Entre em <b>console.cloud.google.com</b> com a conta Google da agenda da Julia e crie um projeto (ex.: “Julia Santos Epil”).
+                  </li>
+                  <li>
+                    Em <b>APIs e serviços → Biblioteca</b>, procure <b>Google Calendar API</b> e clique em <b>Ativar</b>.
+                  </li>
+                  <li>
+                    Em <b>APIs e serviços → Tela de permissão OAuth</b> (ou “Google Auth Platform”): tipo <b>Externo</b>, nome “Julia Santos Epil”, e-mail de
+                    suporte e de contato. Em <b>Público-alvo</b>, clique em <b>Publicar app</b> (“Em produção”).
+                  </li>
+                  <li>
+                    Em <b>Credenciais → Criar credenciais → ID do cliente OAuth</b>: tipo <b>Aplicativo da Web</b>. Em <b>URIs de redirecionamento
+                    autorizados</b>, adicione:
+                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <code className="break-all rounded-lg bg-white px-2 py-1 text-[12px]">{gcfg.redirectUri}</code>
+                      <CopyButton value={gcfg.redirectUri} size="sm" variant="soft" label="Copiar" />
+                    </span>
+                  </li>
+                  <li>
+                    O Google mostra o <b>ID do cliente</b> e a <b>Chave secreta do cliente</b>. Na Vercel (projeto julia-santos-epil → Settings → Environment
+                    Variables), crie <code>GOOGLE_CLIENT_ID</code> e <code>GOOGLE_CLIENT_SECRET</code> com esses valores e faça <b>Redeploy</b>.
+                  </li>
+                  <li>
+                    Volte a esta tela e clique em <b>Conectar Google Agenda</b>. Como o app não passou pela verificação do Google, aparece o aviso “O Google
+                    não verificou este app”: clique em <b>Avançado → Acessar Julia Santos Epil</b> e permita o acesso à agenda.
+                  </li>
+                </ol>
+                <p className="mt-3 text-[12px] text-muted">Ao trocar para o domínio próprio, adicione também o novo endereço de retorno no passo 4.</p>
               </div>
             )}
 

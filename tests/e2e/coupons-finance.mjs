@@ -26,6 +26,8 @@ async function step(id, name, fn) {
   }
 }
 
+// ambiente local: zera o limitador de abuso para a bateria de testes não ser bloqueada
+sql("delete from rate_limits");
 const stamp = Date.now().toString().slice(-5);
 const CODE = `TESTE${stamp}`;
 const browser = await chromium.launch();
