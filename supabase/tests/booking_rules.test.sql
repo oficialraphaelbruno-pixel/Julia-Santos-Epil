@@ -162,23 +162,23 @@ begin
   assert v_c.error = 'CUPOM_INVALIDO', 'cupom inexistente aceito';
 
   -- uso 1 (cliente 1)
-  select * into v_r from public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+  select * into v_r from public.create_online_booking_v2('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
      (v_day + time '09:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Um', '5531911110001', null, false, null, 'hash-cup-1', 'BEMVINDA10');
   select * into v_a from public.appointments where id = v_r.appointment_id;
   assert v_a.price_cents = 7200 and v_a.discount_cents = 800 and v_a.original_price_cents = 8000 and v_a.coupon_code = 'BEMVINDA10', 'desconto não gravado';
 
   -- mesma cliente não pode reutilizar
   begin
-    perform public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+    perform public.create_online_booking_v2('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
        (v_day + time '13:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Um', '5531911110001', null, false, null, 'hash-cup-x', 'BEMVINDA10');
     raise exception 'FALHOU: reutilizou cupom';
   exception when others then assert sqlerrm = 'CUPOM_JA_UTILIZADO', sqlerrm; end;
 
   -- uso 2 (cliente 2) e esgotado para cliente 3
-  perform public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+  perform public.create_online_booking_v2('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
      (v_day + time '14:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Dois', '5531911110002', null, false, null, 'hash-cup-2', 'BEMVINDA10');
   begin
-    perform public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+    perform public.create_online_booking_v2('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
        (v_day + time '16:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Tres', '5531911110003', null, false, null, 'hash-cup-3', 'BEMVINDA10');
     raise exception 'FALHOU: passou do limite de usos';
   exception when others then assert sqlerrm = 'CUPOM_ESGOTADO', sqlerrm; end;

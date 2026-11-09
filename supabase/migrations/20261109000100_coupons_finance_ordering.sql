@@ -114,9 +114,9 @@ begin
 end;
 $$;
 
--- Agendamento online agora aceita cupom (validado e travado na mesma transação).
-drop function if exists public.create_online_booking(uuid, uuid, timestamptz, text, text, text, boolean, text, text);
-create or replace function public.create_online_booking(
+-- Agendamento online com cupom (validado e travado na mesma transação).
+-- Função nova (v2) ao lado da anterior: publicação sem interrupção.
+create or replace function public.create_online_booking_v2(
   p_business_id uuid, p_service_id uuid, p_starts_at timestamptz, p_full_name text, p_phone text,
   p_email text, p_marketing_consent boolean, p_client_message text, p_manage_token_hash text,
   p_coupon_code text default null
@@ -325,8 +325,8 @@ $$;
 
 -- Permissões
 revoke execute on function public.coupon_check(uuid, text, uuid, text, boolean) from public, anon, authenticated;
-revoke execute on function public.create_online_booking(uuid, uuid, timestamptz, text, text, text, boolean, text, text, text) from public, anon, authenticated;
+revoke execute on function public.create_online_booking_v2(uuid, uuid, timestamptz, text, text, text, boolean, text, text, text) from public, anon, authenticated;
 revoke execute on function public.admin_finance_summary(uuid, date) from public, anon;
 grant execute on function public.coupon_check(uuid, text, uuid, text, boolean) to service_role;
-grant execute on function public.create_online_booking(uuid, uuid, timestamptz, text, text, text, boolean, text, text, text) to service_role;
+grant execute on function public.create_online_booking_v2(uuid, uuid, timestamptz, text, text, text, boolean, text, text, text) to service_role;
 grant execute on function public.admin_finance_summary(uuid, date) to authenticated, service_role;

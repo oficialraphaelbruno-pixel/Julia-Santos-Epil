@@ -133,7 +133,7 @@ export async function createBookingAction(input: {
 
   const { token, hash } = newManageToken();
   const db = createServiceClient();
-  const { data, error } = await db.rpc("create_online_booking", {
+  const { data, error } = await db.rpc("create_online_booking_v2", {
     p_business_id: business.id,
     p_service_id: base.data.serviceId,
     p_starts_at: base.data.startsAt,
