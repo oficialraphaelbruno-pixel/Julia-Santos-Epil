@@ -63,6 +63,12 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   CLIENTE_NAO_ENCONTRADA: "Cliente não encontrada.",
   PROFISSIONAL_INVALIDO: "Profissional inválida.",
   SEM_PERMISSAO: "Você não tem permissão para esta ação.",
+  CUPOM_INVALIDO: "Cupom inválido ou inativo.",
+  CUPOM_EXPIRADO: "Este cupom está fora do período de validade.",
+  CUPOM_ESGOTADO: "Este cupom já atingiu o limite de usos.",
+  CUPOM_JA_UTILIZADO: "Você já utilizou este cupom.",
+  CUPOM_NAO_APLICAVEL: "Este cupom não vale para o serviço escolhido.",
+  CUPOM_VALOR_MINIMO: "O serviço escolhido não atinge o valor mínimo do cupom.",
 };
 
 export function friendlyDbError(message: string | undefined | null, fallback = "Não foi possível concluir. Tente novamente.") {

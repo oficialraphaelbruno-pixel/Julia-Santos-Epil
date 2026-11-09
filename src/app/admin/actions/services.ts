@@ -131,3 +131,57 @@ export async function deleteCategoryAction(id: string): Promise<ActionResult> {
     return { ok: false, error: e instanceof Error ? e.message : "Erro." };
   }
 }
+
+/** Move um serviço uma posição para cima/baixo dentro da mesma categoria (ordem exibida no site). */
+export async function moveServiceAction(id: string, direction: "up" | "down"): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin({ owner: true });
+    if (!z.uuid().safeParse(id).success) return { ok: false, error: "Serviço inválido." };
+    const { data: all } = await ctx.supabase
+      .from("services")
+      .select("id, category_id, sort_order, name")
+      .eq("business_id", ctx.business.id)
+      .neq("status", "archived")
+      .order("sort_order")
+      .order("name");
+    const list = all ?? [];
+    const me = list.find((s) => s.id === id);
+    if (!me) return { ok: false, error: "Serviço não encontrado." };
+    const group = list.filter((s) => (s.category_id ?? null) === (me.category_id ?? null));
+    const i = group.findIndex((s) => s.id === id);
+    const j = direction === "up" ? i - 1 : i + 1;
+    if (j < 0 || j >= group.length) return { ok: true };
+    [group[i], group[j]] = [group[j], group[i]];
+    const results = await Promise.all(
+      group.map((s, idx) => ctx.supabase.from("services").update({ sort_order: (idx + 1) * 10 }).eq("id", s.id).eq("business_id", ctx.business.id)),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return { ok: false, error: friendlyDbError(failed.error.message) };
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}
+
+/** Move uma categoria uma posição para cima/baixo (ordem dos blocos no site). */
+export async function moveCategoryAction(id: string, direction: "up" | "down"): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin({ owner: true });
+    if (!z.uuid().safeParse(id).success) return { ok: false, error: "Categoria inválida." };
+    const { data } = await ctx.supabase.from("service_categories").select("id, sort_order, name").eq("business_id", ctx.business.id).order("sort_order").order("name");
+    const list = data ?? [];
+    const i = list.findIndex((c) => c.id === id);
+    const j = direction === "up" ? i - 1 : i + 1;
+    if (i < 0) return { ok: false, error: "Categoria não encontrada." };
+    if (j < 0 || j >= list.length) return { ok: true };
+    [list[i], list[j]] = [list[j], list[i]];
+    const results = await Promise.all(list.map((c, idx) => ctx.supabase.from("service_categories").update({ sort_order: (idx + 1) * 10 }).eq("id", c.id)));
+    const failed = results.find((r) => r.error);
+    if (failed?.error) return { ok: false, error: friendlyDbError(failed.error.message) };
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}

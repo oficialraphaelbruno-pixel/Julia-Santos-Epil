@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { normalizeBrazilPhone } from "@/lib/phone";
 import { after } from "next/server";
 import { afterAppointmentChange } from "@/lib/appointment-events";
 import { checkSlotAgainstGoogle, filterSlotsByGoogle } from "@/lib/availability";
@@ -67,11 +68,40 @@ export interface BookingCreated {
   deposit: DepositInfo | null;
 }
 
+export interface CouponPreview {
+  code: string;
+  discountCents: number;
+  originalCents: number;
+  finalCents: number;
+}
+
+/** Prévia do cupom (não consome o uso; o uso é confirmado ao concluir o agendamento). */
+export async function previewCouponAction(slug: string, serviceId: string, code: string, phone: string): Promise<ActionResult<CouponPreview>> {
+  if (!slugSchema.safeParse(slug).success || !uuid.safeParse(serviceId).success) return { ok: false, error: "Dados inválidos." };
+  const clean = code.trim().toUpperCase().replace(/\s+/g, "");
+  if (!/^[A-Z0-9_-]{3,30}$/.test(clean)) return { ok: false, error: friendlyDbError("CUPOM_INVALIDO") };
+  if (!(await checkRateLimit("cupom", 20, 600))) return { ok: false, error: "Muitas tentativas. Aguarde alguns minutos." };
+  const business = await getPublicBusiness(slug);
+  if (!business) return { ok: false, error: "Empresa não encontrada." };
+  const { data, error } = await createServiceClient().rpc("coupon_check", {
+    p_business_id: business.id,
+    p_code: clean,
+    p_service_id: serviceId,
+    p_phone: normalizeBrazilPhone(phone) ?? null,
+    p_lock: false,
+  });
+  const row = (data as { code: string; discount_cents: number; original_cents: number; final_cents: number; error: string | null }[] | null)?.[0];
+  if (error || !row) return { ok: false, error: "Não foi possível validar o cupom." };
+  if (row.error) return { ok: false, error: friendlyDbError(row.error) };
+  return { ok: true, data: { code: row.code, discountCents: row.discount_cents, originalCents: row.original_cents, finalCents: row.final_cents } };
+}
+
 export async function createBookingAction(input: {
   slug: string;
   serviceId: string;
   startsAt: string;
   client: unknown;
+  couponCode?: string;
 }): Promise<ActionResult<BookingCreated>> {
   const base = z
     .object({ slug: slugSchema, serviceId: uuid, startsAt: z.iso.datetime({ offset: true }) })
@@ -113,9 +143,11 @@ export async function createBookingAction(input: {
     p_marketing_consent: parsed.data.marketing ?? false,
     p_client_message: parsed.data.message ?? "",
     p_manage_token_hash: hash,
+    p_coupon_code: input.couponCode ? String(input.couponCode).slice(0, 30) : null,
   });
 
   if (error) {
+    if (error.message.includes("CUPOM_")) return { ok: false, error: friendlyDbError(error.message), fieldErrors: { _code: "CUPOM" } };
     const code = error.message.includes("HORARIO_INDISPONIVEL") ? "HORARIO_INDISPONIVEL" : undefined;
     return { ok: false, error: friendlyDbError(error.message), ...(code ? { fieldErrors: { _code: code } } : {}) };
   }

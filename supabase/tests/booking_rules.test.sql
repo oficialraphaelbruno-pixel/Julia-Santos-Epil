@@ -145,6 +145,51 @@ begin
   raise notice 'OK sinal: 50%% calculado, agendamento pendente até confirmar o Pix';
 end $$;
 
+-- ---------- Cupons ----------
+do $$
+declare v_day date := (select d from t_ctx) + 3; v_r record; v_a public.appointments%rowtype; v_c record;
+begin
+  insert into public.coupons (business_id, code, discount_type, discount_value, max_uses, once_per_client)
+  values ('00000000-0000-0000-0000-00000000000a', 'BEMVINDA10', 'percent', 10, 2, true),
+         ('00000000-0000-0000-0000-00000000000a', 'VENCIDO', 'fixed', 1000, null, false);
+  update public.coupons set valid_until = current_date - 2 where code = 'VENCIDO';
+
+  select * into v_c from public.coupon_check('00000000-0000-0000-0000-00000000000a', 'bemvinda10', '00000000-0000-0000-0000-0000000000c1', '5531911110001');
+  assert v_c.error is null and v_c.discount_cents = 800 and v_c.final_cents = 7200, format('prévia errada: %s', row_to_json(v_c));
+  select * into v_c from public.coupon_check('00000000-0000-0000-0000-00000000000a', 'VENCIDO', '00000000-0000-0000-0000-0000000000c1', null);
+  assert v_c.error = 'CUPOM_EXPIRADO', 'cupom vencido aceito';
+  select * into v_c from public.coupon_check('00000000-0000-0000-0000-00000000000a', 'NAOEXISTE', '00000000-0000-0000-0000-0000000000c1', null);
+  assert v_c.error = 'CUPOM_INVALIDO', 'cupom inexistente aceito';
+
+  -- uso 1 (cliente 1)
+  select * into v_r from public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+     (v_day + time '09:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Um', '5531911110001', null, false, null, 'hash-cup-1', 'BEMVINDA10');
+  select * into v_a from public.appointments where id = v_r.appointment_id;
+  assert v_a.price_cents = 7200 and v_a.discount_cents = 800 and v_a.original_price_cents = 8000 and v_a.coupon_code = 'BEMVINDA10', 'desconto não gravado';
+
+  -- mesma cliente não pode reutilizar
+  begin
+    perform public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+       (v_day + time '13:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Um', '5531911110001', null, false, null, 'hash-cup-x', 'BEMVINDA10');
+    raise exception 'FALHOU: reutilizou cupom';
+  exception when others then assert sqlerrm = 'CUPOM_JA_UTILIZADO', sqlerrm; end;
+
+  -- uso 2 (cliente 2) e esgotado para cliente 3
+  perform public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+     (v_day + time '14:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Dois', '5531911110002', null, false, null, 'hash-cup-2', 'BEMVINDA10');
+  begin
+    perform public.create_online_booking('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+       (v_day + time '16:00') at time zone 'America/Sao_Paulo', 'Cliente Cupom Tres', '5531911110003', null, false, null, 'hash-cup-3', 'BEMVINDA10');
+    raise exception 'FALHOU: passou do limite de usos';
+  exception when others then assert sqlerrm = 'CUPOM_ESGOTADO', sqlerrm; end;
+
+  -- cancelar devolve o uso
+  perform public.cancel_booking_by_token('hash-cup-2', null);
+  select * into v_c from public.coupon_check('00000000-0000-0000-0000-00000000000a', 'BEMVINDA10', '00000000-0000-0000-0000-0000000000c1', '5531911110003');
+  assert v_c.error is null, 'cancelamento não devolveu o uso: ' || coalesce(v_c.error, '');
+  raise notice 'OK cupons: desconto, validade, limite de usos, 1 por cliente e devolução ao cancelar';
+end $$;
+
 -- ---------- Teste 14: isolamento entre empresas (RLS) ----------
 insert into public.clients (business_id, full_name, phone)
 values ('00000000-0000-0000-0000-00000000000b', 'Cliente da B', '5511988887777');
@@ -158,7 +203,7 @@ begin
   select count(*) into n from public.clients where business_id = '00000000-0000-0000-0000-00000000000b';
   assert n = 0, 'FALHOU: usuária A enxergou clientes da empresa B';
   select count(*) into n from public.clients;
-  assert n = 3, format('usuária A deveria ver 3 clientes próprias, viu %s', n);
+  assert n = 5, format('usuária A deveria ver 5 clientes próprias, viu %s', n);
   select count(*) into n from public.appointments where business_id = '00000000-0000-0000-0000-00000000000b';
   assert n = 0, 'FALHOU: viu agendamentos de B';
   select count(*) into n from public.businesses;

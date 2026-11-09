@@ -125,6 +125,9 @@ export interface Appointment {
   deposit_status: DepositStatus;
   deposit_due_at: string | null;
   deposit_paid_at: string | null;
+  coupon_code: string | null;
+  discount_cents: number;
+  original_price_cents: number | null;
 }
 
 export type DepositStatus = "nao_exigido" | "aguardando" | "pago" | "dispensado" | "devolvido";

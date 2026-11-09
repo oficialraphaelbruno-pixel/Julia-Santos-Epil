@@ -43,3 +43,9 @@
 - Orientações pré e pós-procedimento por serviço: as pré acompanham a confirmação; as pós são enviadas ao concluir o atendimento (e-mail + botão de WhatsApp).
 - Configuração em Agendamento Online → "Cobrar sinal via Pix" (chave, favorecida, banco, porcentagem e prazo).
 - **Não há verificação automática do Pix**: o recebimento é confirmado manualmente pela Julia (Pix estático não notifica o sistema).
+
+## ✅ Cupons, financeiro e ordem dos serviços (novembro/2026)
+- **Cupons de desconto**: nome personalizado, % ou valor fixo, limite de usos, 1 uso por cliente, valor mínimo, validade, serviços específicos, ativar/desativar. A cliente aplica no agendamento online (o sinal é recalculado sobre o valor com desconto). Cancelar um agendamento devolve o uso.
+- **Financeiro**: despesas (com categoria, vencimento, fornecedor, forma de pagamento, comprovante em área privada e repetição mensal para despesas fixas), receitas avulsas, resumo do mês (recebido, despesas, resultado, a receber, previsto, ticket médio, descontos), gráfico de 6 meses, receita por serviço e por forma de pagamento, despesas por categoria, alerta de despesas vencidas e exportação CSV.
+- **Ordem dos serviços e categorias**: setas no painel; o site segue a mesma ordem.
+- **Domínio**: guia em `docs/DOMINIO.md`.

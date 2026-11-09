@@ -3,9 +3,9 @@ import Image from "next/image";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Archive, Clock, Eye, EyeOff, Pencil, Plus, Power, Sparkles, Tags, Trash2 } from "lucide-react";
+import { Archive, ChevronDown, ChevronUp, Clock, Eye, EyeOff, Pencil, Plus, Power, Sparkles, Tags, Trash2 } from "lucide-react";
 import { ServiceForm } from "@/components/admin/service-form";
-import { deleteCategoryAction, renameCategoryAction, setServiceStatusAction } from "@/app/admin/actions/services";
+import { deleteCategoryAction, moveCategoryAction, moveServiceAction, renameCategoryAction, setServiceStatusAction } from "@/app/admin/actions/services";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -34,9 +34,33 @@ export function ServicesManager({
   const [editing, setEditing] = useState<Service | null | undefined>(openNew ? null : undefined);
   const [showArchived, setShowArchived] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
-  const [, start] = useTransition();
+  const [pending, start] = useTransition();
 
   const visible = services.filter((s) => showArchived || s.status !== "archived");
+  // Mesma ordem do site: categorias por posição; serviços por posição dentro da categoria.
+  const groups = [
+    ...categories.map((c, index) => ({ key: c.id, title: c.name, categoryId: c.id as string | null, index, items: visible.filter((s) => s.category_id === c.id) })),
+    {
+      key: "sem-categoria",
+      title: categories.length ? "Outros serviços" : "Serviços",
+      categoryId: null as string | null,
+      index: categories.length,
+      items: visible.filter((s) => !s.category_id || !categories.some((c) => c.id === s.category_id)),
+    },
+  ].filter((g) => g.items.length);
+  const categoryGroupsCount = categories.length;
+  const moveSvc = (id: string, dir: "up" | "down") =>
+    start(async () => {
+      const r = await moveServiceAction(id, dir);
+      if (r.ok) router.refresh();
+      else toast.error(r.error);
+    });
+  const moveCat = (id: string, dir: "up" | "down") =>
+    start(async () => {
+      const r = await moveCategoryAction(id, dir);
+      if (r.ok) router.refresh();
+      else toast.error(r.error);
+    });
   const catName = (id: string | null) => categories.find((c) => c.id === id)?.name;
 
   function setStatus(s: Service, status: Service["status"]) {
@@ -76,51 +100,88 @@ export function ServicesManager({
           }
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {visible.map((s) => (
-            <div key={s.id} className={cn("card-premium flex gap-4 p-4 sm:p-5", s.status !== "active" && "opacity-70")}>
-              {s.image_url ? (
-                <div className="relative size-20 shrink-0 overflow-hidden rounded-xl">
-                  <Image src={s.image_url} alt="" fill sizes="80px" className="object-cover" />
-                </div>
-              ) : null}
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-display text-lg leading-tight text-ink">{s.name}</p>
-                  {s.is_combo ? <Badge className="bg-cream text-gold-dark ring-champagne/40">Combo</Badge> : null}
-                  {s.status !== "active" ? <Badge className="bg-zinc-100 text-zinc-600 ring-zinc-200">{STATUS_TEXT[s.status]}</Badge> : null}
-                </div>
-                <p className="mt-1 text-[13px] text-muted">
-                  {catName(s.category_id) ?? "Sem categoria"}
-                  {!s.show_online ? " · somente interno" : ""}
-                </p>
-                <div className="mt-2 flex items-center gap-4 text-sm">
-                  <span className="font-semibold text-gold-dark">{formatMoney(s.price_cents)}</span>
-                  <span className="inline-flex items-center gap-1 text-muted">
-                    <Clock className="size-3.5" /> {formatDuration(s.duration_minutes)}
+        <div className="space-y-8">
+          {groups.map((g) => (
+            <section key={g.key} data-testid={`grupo-${g.title}`}>
+              <div className="mb-3 flex items-center gap-2">
+                <h2 className="font-display text-xl text-gold-dark">{g.title}</h2>
+                <span className="text-[13px] text-muted">({g.items.length})</span>
+                {g.categoryId && categories.length > 1 ? (
+                  <span className="ml-auto flex gap-1">
+                    <Button size="icon" variant="ghost" className="size-8" aria-label={`Subir categoria ${g.title}`} disabled={pending || g.index === 0} onClick={() => moveCat(g.categoryId!, "up")}>
+                      <ChevronUp />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="size-8" aria-label={`Descer categoria ${g.title}`} disabled={pending || g.index === categoryGroupsCount - 1} onClick={() => moveCat(g.categoryId!, "down")}>
+                      <ChevronDown />
+                    </Button>
                   </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <Button size="sm" variant="soft" onClick={() => setEditing(s)}>
-                    <Pencil /> Editar
-                  </Button>
-                  {s.status === "active" ? (
-                    <Button size="sm" variant="ghost" onClick={() => setStatus(s, "inactive")}>
-                      <EyeOff /> Desativar
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="ghost" onClick={() => setStatus(s, "active")}>
-                      {s.status === "archived" ? <Power /> : <Eye />} Ativar
-                    </Button>
-                  )}
-                  {s.status !== "archived" ? (
-                    <Button size="sm" variant="ghost" onClick={() => setStatus(s, "archived")}>
-                      <Archive /> Arquivar
-                    </Button>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
-            </div>
+              <div className="card-premium divide-y divide-line/70 overflow-hidden">
+                {g.items.map((s, idx) => (
+                  <div key={s.id} className={cn("flex items-center gap-3 p-3 sm:gap-4 sm:p-4", s.status !== "active" && "opacity-70")} data-testid={`servico-${s.name}`}>
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        className="grid size-8 place-items-center rounded-lg text-gold-dark transition hover:bg-ivory disabled:opacity-25"
+                        aria-label={`Mover ${s.name} para cima`}
+                        disabled={pending || idx === 0 || s.status === "archived"}
+                        onClick={() => moveSvc(s.id, "up")}
+                      >
+                        <ChevronUp className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="grid size-8 place-items-center rounded-lg text-gold-dark transition hover:bg-ivory disabled:opacity-25"
+                        aria-label={`Mover ${s.name} para baixo`}
+                        disabled={pending || idx === g.items.length - 1 || s.status === "archived"}
+                        onClick={() => moveSvc(s.id, "down")}
+                      >
+                        <ChevronDown className="size-4" />
+                      </button>
+                    </div>
+                    {s.image_url ? (
+                      <div className="relative hidden size-14 shrink-0 overflow-hidden rounded-xl sm:block">
+                        <Image src={s.image_url} alt="" fill sizes="56px" className="object-cover" />
+                      </div>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-ink">{s.name}</p>
+                        {s.is_combo ? <Badge className="bg-cream text-gold-dark ring-champagne/40">Combo</Badge> : null}
+                        {s.status !== "active" ? <Badge className="bg-zinc-100 text-zinc-600 ring-zinc-200">{STATUS_TEXT[s.status]}</Badge> : null}
+                        {!s.show_online ? <Badge className="bg-zinc-100 text-zinc-600 ring-zinc-200">Só interno</Badge> : null}
+                      </div>
+                      <p className="mt-0.5 flex items-center gap-3 text-[13px] text-muted">
+                        <span className="font-semibold text-gold-dark">{formatMoney(s.price_cents)}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="size-3.5" /> {formatDuration(s.duration_minutes)}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <Button size="sm" variant="soft" onClick={() => setEditing(s)}>
+                        <Pencil /> <span className="hidden sm:inline">Editar</span>
+                      </Button>
+                      {s.status === "active" ? (
+                        <Button size="sm" variant="ghost" onClick={() => setStatus(s, "inactive")} aria-label="Desativar">
+                          <EyeOff /> <span className="hidden md:inline">Desativar</span>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="ghost" onClick={() => setStatus(s, "active")} aria-label="Ativar">
+                          {s.status === "archived" ? <Power /> : <Eye />} <span className="hidden md:inline">Ativar</span>
+                        </Button>
+                      )}
+                      {s.status !== "archived" ? (
+                        <Button size="sm" variant="ghost" onClick={() => setStatus(s, "archived")} aria-label="Arquivar">
+                          <Archive /> <span className="hidden md:inline">Arquivar</span>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}

@@ -22,7 +22,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
     <>
       <PageHeader
         title="Serviços"
-        description="Valor e duração cadastrados aqui são usados automaticamente na agenda e no site."
+        description="Valor e duração são usados automaticamente na agenda e no site. Use as setas para mudar a ordem em que os serviços aparecem no site."
       />
       {role !== "owner" ? (
         <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Somente a proprietária pode alterar serviços.</p>

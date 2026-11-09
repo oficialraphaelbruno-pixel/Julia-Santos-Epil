@@ -15,6 +15,7 @@ import {
   Link2,
   Loader2,
   Sparkles,
+  TicketPercent,
   UserRound,
 } from "lucide-react";
 import { BookingCalendar } from "@/components/booking/booking-calendar";
@@ -29,7 +30,9 @@ import {
   createBookingAction,
   getAvailableDaysAction,
   getAvailableSlotsAction,
+  previewCouponAction,
   type BookingCreated,
+  type CouponPreview,
   type Slot,
 } from "@/app/agendar/actions";
 import { clientBookingSchema, type ClientBookingInput } from "@/lib/schemas";
@@ -70,6 +73,12 @@ export function BookingWizard(props: Props) {
   const [pending, startTransition] = useTransition();
   const [termsOk, setTermsOk] = useState(false);
   const depositRequired = Boolean(settings.deposit_enabled);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<CouponPreview | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const finalPrice = coupon ? coupon.finalCents : (service?.price_cents ?? 0);
+  const depositPreview = Math.round((finalPrice * settings.deposit_percent) / 100);
 
   const form = useForm<ClientBookingInput>({
     resolver: zodResolver(clientBookingSchema),
@@ -117,12 +126,19 @@ export function BookingWizard(props: Props) {
         serviceId: service.id,
         startsAt: slot.start,
         client: { ...form.getValues(), terms: termsOk },
+        couponCode: coupon?.code,
       });
       if (res.ok && res.data) {
         setResult(res.data);
         return;
       }
       if (!res.ok) {
+        if (res.fieldErrors?._code === "CUPOM") {
+          setCoupon(null);
+          setCouponError(res.error);
+          setNotice(`${res.error} Remova ou troque o cupom para continuar.`);
+          return;
+        }
         if (res.fieldErrors?._code === "HORARIO_INDISPONIVEL") {
           setNotice("Que pena! Esse horário acabou de ser reservado. Veja abaixo outros horários disponíveis nesse dia.");
           setSlot(null);
@@ -173,7 +189,7 @@ export function BookingWizard(props: Props) {
               {result.reference}
             </span>
           </div>
-          <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} />
+          <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} />
         </div>
 
         {result.deposit ? (
@@ -395,7 +411,72 @@ export function BookingWizard(props: Props) {
         <section className="animate-fade-up">
           <StepTitle icon={<Check />} title="Revise seu agendamento" />
           <div className="rounded-3xl border border-line bg-white p-6 shadow-soft">
-            <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} />
+            <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} />
+            <div className="mt-5 rounded-2xl border border-dashed border-champagne/70 p-4" data-testid="coupon-box">
+              {coupon ? (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-emerald-800">
+                    <TicketPercent className="size-4 shrink-0" />
+                    <span>
+                      Cupom <b className="font-mono">{coupon.code}</b>
+                    </span>
+                    <span className="whitespace-nowrap">aplicado: −{formatMoney(coupon.discountCents)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="text-[13px] text-gold-dark underline"
+                    onClick={() => {
+                      setCoupon(null);
+                      setCouponInput("");
+                    }}
+                  >
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="coupon" className="mb-1.5 flex items-center gap-2 text-[13px] font-medium text-ink/80">
+                    <TicketPercent className="size-4 text-gold" /> Tem um cupom de desconto?
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="coupon"
+                      className="font-mono uppercase"
+                      placeholder="DIGITE O CUPOM"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase());
+                        setCouponError(null);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11"
+                      disabled={!couponInput.trim() || applyingCoupon}
+                      data-testid="apply-coupon"
+                      onClick={async () => {
+                        setApplyingCoupon(true);
+                        const r = await previewCouponAction(business.slug, service.id, couponInput, form.getValues("phone"));
+                        setApplyingCoupon(false);
+                        if (r.ok && r.data) {
+                          setCoupon(r.data);
+                          setCouponError(null);
+                          setNotice(null);
+                        } else if (!r.ok) setCouponError(r.error);
+                      }}
+                    >
+                      {applyingCoupon ? <Loader2 className="animate-spin" /> : null} Aplicar
+                    </Button>
+                  </div>
+                  {couponError ? (
+                    <p role="alert" className="mt-1.5 text-[13px] text-rose-600" data-testid="coupon-error">
+                      {couponError}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </div>
             <div className="mt-5 border-t border-line/70 pt-5 text-sm">
               <p className="text-muted">Cliente</p>
               <p className="mt-1 font-medium text-ink">{form.getValues("fullName")}</p>
@@ -408,17 +489,17 @@ export function BookingWizard(props: Props) {
                 <p className="whitespace-pre-line">{settings.cancellation_policy}</p>
               </div>
             ) : null}
-            {depositRequired && service.price_cents > 0 ? (
+            {depositRequired && finalPrice > 0 ? (
               <div className="mt-5 rounded-2xl border border-champagne/60 bg-ivory p-4 text-[14px]" data-testid="deposit-notice">
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium text-ink">Sinal ({settings.deposit_percent}%) via Pix</span>
                   <span className="font-display text-xl text-gold-dark">
-                    {formatMoney(Math.round((service.price_cents * settings.deposit_percent) / 100))}
+                    {formatMoney(depositPreview)}
                   </span>
                 </div>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-ink/70">
                   Após confirmar, você verá o Pix para pagamento. O horário fica reservado por até {settings.deposit_deadline_hours}h aguardando o
-                  sinal. O restante ({formatMoney(service.price_cents - Math.round((service.price_cents * settings.deposit_percent) / 100))}) é pago
+                  sinal. O restante ({formatMoney(finalPrice - depositPreview)}) é pago
                   no atendimento.
                 </p>
               </div>
@@ -466,18 +547,26 @@ function Summary({
   slot,
   tz,
   professionalName,
+  coupon,
 }: {
   service: PublicService;
   slot: Slot;
   tz: string;
   professionalName: string | null;
+  coupon?: CouponPreview | null;
 }) {
   const rows = [
     ["Serviço", service.name],
     ["Data", `${formatDate(slot.start, tz)} (${formatLongDate(slot.start, tz).split(",")[0]})`],
     ["Horário", `${formatTime(slot.start, tz)} às ${formatTime(slot.end, tz)}`],
     ["Duração", formatDuration(service.duration_minutes)],
-    ["Valor", formatMoney(service.price_cents)],
+    ...(coupon
+      ? [
+          ["Valor do serviço", formatMoney(coupon.originalCents)],
+          [`Desconto (${coupon.code})`, `− ${formatMoney(coupon.discountCents)}`],
+          ["Valor final", formatMoney(coupon.finalCents)],
+        ]
+      : [["Valor", formatMoney(service.price_cents)]]),
     ...(professionalName ? [["Profissional", professionalName]] : []),
   ];
   return (

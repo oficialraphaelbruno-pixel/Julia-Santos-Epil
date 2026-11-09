@@ -151,6 +151,14 @@ export default async function AppointmentPage({ params, searchParams }: { params
                 <dt className="text-muted">Valor</dt>
                 <dd className="font-medium">{formatMoney(a.price_cents)}</dd>
               </div>
+              {a.coupon_code ? (
+                <div>
+                  <dt className="text-muted">Cupom</dt>
+                  <dd className="font-mono font-medium text-emerald-800">
+                    {a.coupon_code} <span className="font-sans text-[12px] text-muted">−{formatMoney(a.discount_cents)}</span>
+                  </dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-muted">Duração</dt>
                 <dd>{formatDuration(a.duration_minutes)}</dd>
