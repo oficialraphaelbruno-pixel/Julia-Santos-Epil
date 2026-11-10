@@ -1,6 +1,8 @@
 # Domínio próprio — passo a passo (Registro.br + Vercel)
 
-Endereço atual (continua funcionando): https://julia-santos-epil.vercel.app
+**Status (10/11/2026):** domínio `juliasantosepil.com.br` ativo na Vercel (DNS no Registro.br, modo avançado: A `@` → `216.198.79.1`; CNAME `www` → `6393e07e60970ecf.vercel-dns-017.com.`). `www` redireciona para o domínio principal. `NEXT_PUBLIC_SITE_URL` = `https://juliasantosepil.com.br`.
+
+Endereço antigo (continua funcionando): https://julia-santos-epil.vercel.app
 
 ## 1. Comprar no Registro.br (você)
 1. Acesse https://registro.br e pesquise o domínio (ex.: `juliasantosepil.com.br`).
