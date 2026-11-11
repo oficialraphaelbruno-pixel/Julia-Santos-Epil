@@ -427,7 +427,10 @@ export function BookingWizard(props: Props) {
               {form.formState.errors.privacy ? <p className="text-[13px] text-rose-600">{form.formState.errors.privacy.message}</p> : null}
               <label className="flex items-start gap-3 text-sm leading-relaxed text-ink/80">
                 <input type="checkbox" className="mt-1 size-4 accent-[#b68d40]" {...form.register("marketing")} />
-                <span>Aceito receber novidades e mensagens de relacionamento pelo WhatsApp (opcional, pode ser revogado a qualquer momento).</span>
+                <span>
+                  <b className="font-medium text-ink">Aceito receber novidades</b>, promoções e cupons por e-mail e WhatsApp. (Opcional: você pode
+                  cancelar quando quiser.)
+                </span>
               </label>
             </div>
             <Button type="submit" size="lg" className="w-full">

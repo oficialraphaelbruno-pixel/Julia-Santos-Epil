@@ -11,3 +11,4 @@ supabase/.branches/
 tests/e2e/screenshots/
 .DS_Store
 tests/e2e/tmp/
+tmp/

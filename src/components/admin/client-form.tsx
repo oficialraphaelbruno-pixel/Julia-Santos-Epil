@@ -91,7 +91,7 @@ export function ClientForm({
           </Field>
           <label className="flex items-start gap-3 rounded-2xl bg-ivory p-3 text-sm text-ink/80">
             <input type="checkbox" className="mt-0.5 size-4 accent-[#b68d40]" {...form.register("marketingConsent")} />
-            <span>A cliente autorizou receber mensagens de relacionamento e novidades.</span>
+            <span>A cliente autorizou receber novidades, promoções e cupons por e-mail e WhatsApp.</span>
           </label>
         </>
       ) : null}
