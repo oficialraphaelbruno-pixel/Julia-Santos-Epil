@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { CouponsManager, type CouponRow } from "@/components/admin/coupons-manager";
 import { requireAdmin } from "@/lib/auth";
 import { todayKey } from "@/lib/format";
+import { SITE_URL } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Cupons" };
 
@@ -26,9 +27,9 @@ export default async function CouponsPage() {
     <>
       <PageHeader
         title="Cupons de desconto"
-        description="Crie cupons com nome personalizado, limite de usos e validade. As clientes aplicam o cupom no agendamento online."
+        description="Crie cupons com nome personalizado, limite de usos e validade. As clientes aplicam o cupom no agendamento online ou recebem o link do cupom, que já abre o agendamento com o desconto."
       />
-      <CouponsManager coupons={rows} services={(services ?? []) as { id: string; name: string }[]} today={todayKey(ctx.business.timezone)} canEdit={ctx.role === "owner"} />
+      <CouponsManager coupons={rows} services={(services ?? []) as { id: string; name: string }[]} today={todayKey(ctx.business.timezone)} canEdit={ctx.role === "owner"} siteUrl={SITE_URL} />
     </>
   );
 }

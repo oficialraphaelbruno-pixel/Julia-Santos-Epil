@@ -115,7 +115,7 @@ export default async function DashboardPage() {
       </div>
 
       {setup.some((s) => !s.done) ? (
-        <Card className="mb-6 border-champagne/60 bg-[linear-gradient(135deg,#fff,#faf7f2)]">
+        <Card className="mb-6 border-champagne/60 bg-[linear-gradient(135deg,var(--color-white),var(--color-ivory))]">
           <CardContent>
             <p className="font-display text-lg">Primeiros passos</p>
             <p className="text-sm text-muted">Configure o essencial para começar a receber agendamentos.</p>
@@ -186,7 +186,7 @@ export default async function DashboardPage() {
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         {money.map((s) => (
-          <div key={s.label} className="card-premium bg-[linear-gradient(160deg,#fff_40%,#faf7f2)] p-4 sm:p-5">
+          <div key={s.label} className="card-premium bg-[linear-gradient(160deg,var(--color-white)_40%,var(--color-ivory))] p-4 sm:p-5">
             <div className="flex items-start justify-between">
               <p className="text-[12.5px] text-muted">{s.label}</p>
               <s.icon className="size-4 text-gold" />

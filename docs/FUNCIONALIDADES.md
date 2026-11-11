@@ -55,3 +55,7 @@
 - A cliente informa **e-mail ou WhatsApp + nome completo** (como no agendamento; acentos e maiúsculas não importam) e vê seus agendamentos futuros: serviço, data, horário, valor, cupom, situação, Pix do sinal pendente e botões "Adicionar ao Google Agenda" / arquivo .ics.
 - Segurança: mensagem genérica quando não encontra (não revela se a cliente existe) e limite de 8 consultas a cada 15 minutos por aparelho. Remarcar/cancelar continua pelo link seguro da confirmação ou pelo WhatsApp.
 - Guia de ativação do Google Agenda exibido na própria tela Integrações.
+
+## ✅ Link de cupom e modo escuro do painel
+- **Link do cupom**: cada cupom tem um link curto `https://juliasantosepil.com.br/cupom/CODIGO` (botões "Copiar link" e "Enviar no WhatsApp" na tela Cupons). O link abre o agendamento com o cupom ativado; se o cupom vale para **um único serviço**, o serviço já vem escolhido. O desconto é validado e aplicado na revisão (as mesmas regras do cupom digitado). Parâmetros de campanha (ex.: `?utm_source=instagram`) são mantidos. Cupom inexistente, vencido ou esgotado mostra um aviso e a cliente agenda normalmente.
+- **Modo escuro (somente o painel)**: botão "Modo escuro / Modo claro" no menu lateral (computador) e no topo (celular). A escolha fica salva no aparelho; o site público continua sempre claro.

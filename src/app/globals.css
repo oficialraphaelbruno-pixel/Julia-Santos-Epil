@@ -103,6 +103,83 @@
   }
 }
 
+/*
+ * Modo escuro do painel administrativo (só /admin). A classe .admin-dark fica
+ * no contêiner do painel (renderizado no servidor) e no <html> enquanto o
+ * painel está aberto, para alcançar diálogos e avisos abertos fora do contêiner.
+ */
+.admin-dark {
+  color-scheme: dark;
+  --color-ivory: #12100e;
+  --color-cream: #1a1714;
+  --color-sand: #2b2620;
+  --color-white: #1c1916;
+  --color-ink: #efe9df;
+  --color-muted: #a8a196;
+  --color-line: #3a332a;
+  --color-gold-dark: #d8b46e;
+  --color-gold-deep: #e6c88d;
+
+  --color-emerald-50: #10261b;
+  --color-emerald-200: #1f4a33;
+  --color-emerald-700: #6ee7a8;
+  --color-emerald-800: #86efac;
+  --color-rose-50: #2d1416;
+  --color-rose-100: #3a1a1d;
+  --color-rose-200: #5a2a2e;
+  --color-rose-700: #fca5ad;
+  --color-rose-800: #fecdd3;
+  --color-amber-50: #2a2010;
+  --color-amber-100: #3a2c12;
+  --color-amber-200: #5a4518;
+  --color-amber-300: #6e5520;
+  --color-amber-700: #f5c977;
+  --color-amber-800: #fbd38d;
+  --color-amber-900: #fde3b0;
+  --color-sky-50: #0f2230;
+  --color-sky-200: #1e4058;
+  --color-sky-800: #9fd3f5;
+  --color-zinc-100: #26231f;
+  --color-zinc-200: #3a3631;
+  --color-zinc-300: #4a453f;
+  --color-zinc-600: #c2bcb3;
+  --color-stone-100: #26231f;
+  --color-stone-200: #3a3631;
+  --color-stone-700: #d6d0c6;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.35), 0 18px 40px -18px rgb(0 0 0 / 0.7);
+}
+.admin-dark body {
+  background-color: var(--color-ivory);
+}
+/* "white" virou a cor das superfícies; o texto branco continua branco. */
+.admin-dark .text-white {
+  color: #fff;
+}
+.admin-dark .text-rose-600 {
+  color: #fb8a96;
+}
+.admin-dark .text-emerald-600 {
+  color: #5fd394;
+}
+/* Botão escuro e fundos translúcidos que usavam a cor do texto. */
+.admin-dark .bg-ink {
+  background-color: #efe9df;
+}
+.admin-dark .bg-ink.text-white {
+  color: #12100e;
+}
+.admin-dark .hover\:bg-black:hover {
+  background-color: #fff;
+}
+.admin-dark .bg-ink\/40 {
+  background-color: rgb(0 0 0 / 0.55);
+}
+.admin-dark ::selection {
+  background: rgb(201 163 95 / 0.35);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

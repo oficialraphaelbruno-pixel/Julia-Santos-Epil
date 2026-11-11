@@ -22,6 +22,7 @@ import {
 import { BrandLogo } from "@/components/site/brand-logo";
 import { logoutAction } from "@/app/admin/auth-actions";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/admin/theme-toggle";
 
 export const NAV_ITEMS = [
   { href: "/admin", label: "Painel de Controle", short: "Painel", icon: LayoutDashboard },
@@ -41,7 +42,7 @@ function isActive(path: string, href: string) {
   return href === "/admin" ? path === "/admin" : path === href || path.startsWith(href + "/");
 }
 
-export function AdminSidebar({ logo, businessName, email }: { logo: string | null; businessName: string; email: string }) {
+export function AdminSidebar({ logo, businessName, email, dark }: { logo: string | null; businessName: string; email: string; dark: boolean }) {
   const path = usePathname();
   return (
     <aside className="sticky top-0 hidden h-dvh w-68 shrink-0 flex-col border-r border-line/80 bg-white lg:flex">
@@ -72,8 +73,9 @@ export function AdminSidebar({ logo, businessName, email }: { logo: string | nul
         <p className="truncate px-2 text-xs text-muted" title={email}>
           {email}
         </p>
+        <ThemeToggle initialDark={dark} className="mt-2" />
         <form action={logoutAction}>
-          <button type="submit" className="mt-2 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm text-ink/70 transition hover:bg-ivory hover:text-ink">
+          <button type="submit" className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm text-ink/70 transition hover:bg-ivory hover:text-ink">
             <LogOut className="size-4" /> Sair
           </button>
         </form>
@@ -82,7 +84,7 @@ export function AdminSidebar({ logo, businessName, email }: { logo: string | nul
   );
 }
 
-export function AdminMobileNav({ logo, businessName }: { logo: string | null; businessName: string }) {
+export function AdminMobileNav({ logo, businessName, dark }: { logo: string | null; businessName: string; dark: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const bottom = [NAV_ITEMS[0], NAV_ITEMS[1], null, NAV_ITEMS[2]];
@@ -93,7 +95,10 @@ export function AdminMobileNav({ logo, businessName }: { logo: string | null; bu
         <Link href="/admin" aria-label="Painel">
           <BrandLogo src={logo} name={businessName} className="h-11 w-[70px]" priority />
         </Link>
-        <span className="font-display text-[15px] text-ink/80">Studio Manager</span>
+        <div className="flex items-center gap-1">
+          <span className="font-display text-[15px] text-ink/80">Studio Manager</span>
+          <ThemeToggle initialDark={dark} compact />
+        </div>
       </header>
 
       <nav

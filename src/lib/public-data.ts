@@ -83,3 +83,43 @@ export function businessAddress(b: Pick<Business, "address_line" | "address_dist
   const parts = [b.address_line, b.address_district, cityState, b.address_zip ? `CEP ${b.address_zip}` : null].filter(Boolean);
   return parts.length ? parts.join(", ") : null;
 }
+
+export interface LinkCoupon {
+  code: string;
+  /** Ex.: "30% de desconto" */
+  label: string;
+  /** Serviços em que o cupom vale (null = todos). */
+  serviceIds: string[] | null;
+}
+
+/**
+ * Cupom recebido por link de divulgação. Só devolve dados de cupons ativos,
+ * dentro da validade e com usos disponíveis; a validação definitiva (serviço,
+ * valor mínimo, uso por cliente) continua no banco, no momento do agendamento.
+ */
+export async function getLinkCoupon(businessId: string, timezone: string, code: string): Promise<LinkCoupon | null> {
+  const db = createServiceClient();
+  const { data: c } = await db
+    .from("coupons")
+    .select("id, code, discount_type, discount_value, max_uses, valid_from, valid_until, service_ids, active")
+    .eq("business_id", businessId)
+    .eq("code", code)
+    .maybeSingle();
+  if (!c || !c.active) return null;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+  if ((c.valid_from && today < c.valid_from) || (c.valid_until && today > c.valid_until)) return null;
+  if (c.max_uses !== null) {
+    const { count } = await db
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("coupon_id", c.id)
+      .neq("status", "cancelled");
+    if ((count ?? 0) >= c.max_uses) return null;
+  }
+  const money = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return {
+    code: c.code,
+    label: c.discount_type === "percent" ? `${c.discount_value}% de desconto` : `${money(c.discount_value)} de desconto`,
+    serviceIds: c.service_ids?.length ? (c.service_ids as string[]) : null,
+  };
+}

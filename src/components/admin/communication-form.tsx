@@ -120,7 +120,7 @@ export function CommunicationForm({
               </button>
             ) : null}
           </div>
-          <div className="rounded-2xl bg-[#e7ddd0] p-4">
+          <div className="rounded-2xl bg-sand p-4">
             <p className="mb-2 text-[11px] uppercase tracking-wider text-ink/50">Prévia</p>
             <div className="max-w-sm whitespace-pre-line rounded-2xl rounded-tl-sm bg-white p-3 text-[14px] leading-relaxed shadow-sm">
               {renderTemplate(

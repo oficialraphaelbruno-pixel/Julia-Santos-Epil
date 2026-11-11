@@ -25,7 +25,7 @@ export default async function OnlineBookingPage() {
       <PageHeader title="Agendamento Online" description="Sua página pública de reservas. Alterações refletem imediatamente no site." />
 
       <div className="card-premium mb-6 overflow-hidden">
-        <div className="bg-[linear-gradient(135deg,#faf7f2,#fff)] p-5 sm:p-6">
+        <div className="bg-[linear-gradient(135deg,var(--color-ivory),var(--color-white))] p-5 sm:p-6">
           <div className="flex items-center gap-2 text-sm font-medium text-ink">
             <Link2 className="size-4 text-gold" /> Seu link de agendamento
             <span className={`ml-2 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${s.online_enabled ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>

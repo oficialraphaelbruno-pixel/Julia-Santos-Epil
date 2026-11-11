@@ -2,9 +2,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Copy, Loader2, Pencil, Plus, Power, PowerOff, TicketPercent, Trash2 } from "lucide-react";
+import { Copy, Link2, Loader2, Pencil, Plus, Power, PowerOff, TicketPercent, Trash2 } from "lucide-react";
 import { deleteCouponAction, saveCouponAction, setCouponActiveAction, type CouponInput } from "@/app/admin/actions/coupons";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty";
@@ -38,11 +39,13 @@ export function CouponsManager({
   services,
   today,
   canEdit,
+  siteUrl,
 }: {
   coupons: CouponRow[];
   services: { id: string; name: string }[];
   today: string;
   canEdit: boolean;
+  siteUrl: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<CouponRow | null | undefined>(undefined);
@@ -121,6 +124,27 @@ export function CouponsManager({
                     </dd>
                   </div>
                 </dl>
+                <div className="mt-4 rounded-xl border border-dashed border-champagne/70 bg-ivory/60 p-3" data-testid="cupom-link">
+                  <p className="flex items-center gap-1.5 text-[12px] font-medium text-ink/70">
+                    <Link2 className="size-3.5 text-gold" /> Link do cupom (para clientes e anúncios)
+                  </p>
+                  <p className="mt-1 break-all font-mono text-[12.5px] text-gold-deep">{`${siteUrl}/cupom/${c.code}`}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <CopyButton size="sm" variant="soft" value={`${siteUrl}/cupom/${c.code}`} label="Copiar link" />
+                    <Button size="sm" variant="ghost" asChild>
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(`Ganhe ${discountLabel(c)} no seu agendamento ✨ Use o link: ${siteUrl}/cupom/${c.code}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Enviar no WhatsApp
+                      </a>
+                    </Button>
+                  </div>
+                  {c.service_ids?.length === 1 ? (
+                    <p className="mt-1.5 text-[11.5px] text-muted">O link já abre com o serviço do cupom escolhido.</p>
+                  ) : null}
+                </div>
                 {canEdit ? (
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     <Button size="sm" variant="soft" onClick={() => setEditing(c)}>

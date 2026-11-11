@@ -55,6 +55,9 @@ interface Props {
   maxKey: string;
   initialServiceId?: string;
   siteUrl: string;
+  /** Cupom recebido por link de divulgação (?cupom=). */
+  linkCoupon?: { code: string; label: string; serviceNames: string[] | null } | null;
+  linkCouponUnavailable?: boolean;
 }
 
 export function BookingWizard(props: Props) {
@@ -73,7 +76,10 @@ export function BookingWizard(props: Props) {
   const [pending, startTransition] = useTransition();
   const [termsOk, setTermsOk] = useState(false);
   const depositRequired = Boolean(settings.deposit_enabled);
-  const [couponInput, setCouponInput] = useState("");
+  const linkCoupon = props.linkCoupon ?? null;
+  const [couponInput, setCouponInput] = useState(linkCoupon?.code ?? "");
+  // Aplica o cupom do link uma única vez, ao chegar na revisão.
+  const [linkCouponPending, setLinkCouponPending] = useState(Boolean(linkCoupon));
   const [coupon, setCoupon] = useState<CouponPreview | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -244,6 +250,21 @@ export function BookingWizard(props: Props) {
     <div className="mx-auto max-w-2xl">
       <Progress step={step} />
 
+      {linkCoupon && !coupon ? (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-champagne/70 bg-white px-4 py-3 text-sm text-ink/80 shadow-soft" data-testid="link-coupon-banner">
+          <TicketPercent className="mt-0.5 size-5 shrink-0 text-gold" />
+          <p>
+            Cupom <b className="font-mono text-gold-deep">{linkCoupon.code}</b> ativado: {linkCoupon.label}
+            {linkCoupon.serviceNames?.length ? ` em ${linkCoupon.serviceNames.join(", ")}` : ""}. O desconto aparece na revisão do agendamento.
+          </p>
+        </div>
+      ) : null}
+      {props.linkCouponUnavailable ? (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-testid="link-coupon-unavailable">
+          O cupom deste link não está mais disponível, mas você pode agendar normalmente.
+        </div>
+      ) : null}
+
       {notice ? (
         <div role="alert" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {notice}
@@ -361,9 +382,19 @@ export function BookingWizard(props: Props) {
           <StepTitle icon={<UserRound />} title="Seus dados" subtitle="Usamos apenas para confirmar e lembrar seu atendimento." />
           <form
             noValidate
-            onSubmit={form.handleSubmit(() => {
+            onSubmit={form.handleSubmit(async (values) => {
               setNotice(null);
               setStep(4);
+              if (linkCoupon && linkCouponPending && !coupon) {
+                setLinkCouponPending(false);
+                setApplyingCoupon(true);
+                const r = await previewCouponAction(business.slug, service.id, linkCoupon.code, values.phone);
+                setApplyingCoupon(false);
+                if (r.ok && r.data) {
+                  setCoupon(r.data);
+                  setCouponError(null);
+                } else if (!r.ok) setCouponError(r.error);
+              }
             })}
             className="space-y-5 rounded-3xl border border-line bg-white p-5 shadow-soft sm:p-7"
           >
