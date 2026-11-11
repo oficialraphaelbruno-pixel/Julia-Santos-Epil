@@ -21,11 +21,15 @@ export function whatsappCloudConfig() {
       cancelamento: process.env.WHATSAPP_TEMPLATE_CANCELAMENTO ?? "",
       reagendamento: process.env.WHATSAPP_TEMPLATE_REAGENDAMENTO ?? "",
       recebido: process.env.WHATSAPP_TEMPLATE_RECEBIDO ?? "",
+      sinal: process.env.WHATSAPP_TEMPLATE_SINAL ?? "",
     } as Record<string, string>,
   };
 }
 
-/** Envia um modelo aprovado. Parâmetros do corpo: nome, serviço, data, horário. */
+/**
+ * Envia um modelo aprovado. Parâmetros do corpo, nesta ordem: {{1}} primeiro nome, {{2}} serviço,
+ * {{3}} data, {{4}} horário e, só no modelo "sinal", {{5}} valor do sinal.
+ */
 export async function sendWhatsappTemplate(to: string, templateKey: string, params: string[]) {
   const c = whatsappCloudConfig();
   const name = c.templates[templateKey];

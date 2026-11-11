@@ -252,6 +252,7 @@ export async function notifyAppointment(appointmentId: string, event: Appointmen
       a.service_name,
       formatDate(a.starts_at, tz),
       formatTime(a.starts_at, tz),
+      ...(key === "sinal" ? [formatMoney(a.deposit_cents)] : []),
     ]);
     if (!r.skipped) await log("whatsapp_api", r.ok ? "sent" : "failed", a.client.phone, r.ok ? { id: r.id } : { error: r.error });
   }
