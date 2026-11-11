@@ -46,12 +46,13 @@ export function AdminSidebar({ logo, businessName, email, dark }: { logo: string
   const path = usePathname();
   return (
     <aside className="sticky top-0 hidden h-dvh w-68 shrink-0 flex-col border-r border-line/80 bg-white lg:flex">
-      <div className="px-6 pb-4 pt-7">
+      <div className="flex items-start justify-between gap-2 pb-4 pl-6 pr-4 pt-7">
         <Link href="/admin" aria-label="Painel">
           <BrandLogo src={logo} name={businessName} className="h-16 w-[100px]" priority />
         </Link>
+        <ThemeToggle initialDark={dark} compact />
       </div>
-      <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Painel administrativo">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Painel administrativo">
         {NAV_ITEMS.map((item) => {
           const active = isActive(path, item.href);
           return (

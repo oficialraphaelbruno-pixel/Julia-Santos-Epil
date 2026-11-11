@@ -55,7 +55,7 @@ where b.slug = 'julia-santos-epil' and c.marketing_consent and c.email is not nu
 ```
 - Descarte e-mails inválidos ou com erro evidente de digitação (ex.: `.comc`, `gmial.com`, `hotmal.com`) e **liste-os para a dona corrigir no painel** (Clientes → editar). Não corrija por conta própria.
 - Para cada e-mail válido: `get-contact`. Se não existir → `create-contact` (primeiro nome em firstName, restante em lastName) já no segmento. Se existir e `unsubscribed = true` → **pule**. Se existir e não estiver no segmento → `add-contact-to-segment`.
-- Quem tiver `marketing_consent = false` no banco e estiver no segmento → `remove-contact-from-segment`.
+- Liste os contatos do segmento (`list-contacts` com o segmentId). Quem **não estiver** na lista autorizada do banco (desmarcou a autorização, teve os dados apagados no painel ou mudou de e-mail) → `remove-contact-from-segment`. Se a cliente teve os dados apagados (pedido LGPD), remova também o contato do Resend (`remove-contact`) — pergunte à dona antes.
 - Resultado para a dona: total de destinatárias, quem entrou/saiu, quem foi descartado e por quê.
 
 ### 4. Imagem

@@ -2,6 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { createServiceClient } from "@/lib/supabase/admin";
+import { syncAppointmentToGoogle } from "@/lib/appointment-events";
 import { assertAdmin } from "@/lib/auth";
 import { friendlyDbError } from "@/lib/constants";
 import { optionalEmail, phoneSchema } from "@/lib/schemas";
@@ -90,7 +93,7 @@ export async function deleteClientAction(id: string): Promise<ActionResult> {
     if (count) {
       return {
         ok: false,
-        error: "Esta cliente possui histórico de atendimentos. Para atender a um pedido de exclusão (LGPD), use \"Anonimizar dados\".",
+        error: "Esta cliente possui histórico de atendimentos. Use \"Apagar dados da cliente\" para remover os dados pessoais mantendo o histórico.",
       };
     }
     const { error } = await ctx.supabase.from("clients").delete().eq("id", id);
@@ -122,9 +125,19 @@ export async function anonymizeClientAction(id: string): Promise<ActionResult> {
       })
       .eq("id", id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
+    const { data: appts } = await ctx.supabase.from("appointments").select("id, starts_at").eq("client_id", id);
     await ctx.supabase.from("appointments").update({ client_message: null }).eq("client_id", id);
+    const ids = (appts ?? []).map((a) => a.id);
+    if (ids.length) {
+      // destinatário (e-mail/telefone) guardado no histórico de envios
+      await createServiceClient().from("message_logs").update({ recipient: null }).in("appointment_id", ids).eq("business_id", ctx.business.id);
+      // eventos futuros no Google Agenda passam a mostrar o nome anonimizado
+      const upcoming = (appts ?? []).filter((a) => new Date(a.starts_at).getTime() > Date.now()).map((a) => a.id);
+      if (upcoming.length) after(() => Promise.allSettled(upcoming.map((aid) => syncAppointmentToGoogle(aid))));
+    }
     revalidatePath("/admin/clientes");
-    return { ok: true, message: "Dados pessoais anonimizados." };
+    revalidatePath(`/admin/clientes/${id}`);
+    return { ok: true, message: "Dados pessoais apagados. O histórico de atendimentos e valores foi mantido." };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro." };
   }

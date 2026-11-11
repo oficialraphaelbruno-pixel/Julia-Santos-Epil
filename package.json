@@ -17,7 +17,8 @@
     "test:e2e:sinal": "node tests/e2e/deposit.mjs",
     "test:e2e:consulta": "node tests/e2e/consult.mjs",
     "test:e2e:cupons": "node tests/e2e/coupons-finance.mjs",
-    "test:e2e:link-tema": "node tests/e2e/coupon-link-theme.mjs"
+    "test:e2e:link-tema": "node tests/e2e/coupon-link-theme.mjs",
+    "test:e2e:apagar": "node tests/e2e/client-erase.mjs"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

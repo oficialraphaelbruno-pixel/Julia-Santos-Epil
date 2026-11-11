@@ -59,3 +59,8 @@
 ## ✅ Link de cupom e modo escuro do painel
 - **Link do cupom**: cada cupom tem um link curto `https://juliasantosepil.com.br/cupom/CODIGO` (botões "Copiar link" e "Enviar no WhatsApp" na tela Cupons). O link abre o agendamento com o cupom ativado; se o cupom vale para **um único serviço**, o serviço já vem escolhido. O desconto é validado e aplicado na revisão (as mesmas regras do cupom digitado). Parâmetros de campanha (ex.: `?utm_source=instagram`) são mantidos. Cupom inexistente, vencido ou esgotado mostra um aviso e a cliente agenda normalmente.
 - **Modo escuro (somente o painel)**: botão "Modo escuro / Modo claro" no menu lateral (computador) e no topo (celular). A escolha fica salva no aparelho; o site público continua sempre claro.
+
+## ✅ Apagar dados da cliente (LGPD)
+- Na ficha da cliente (Clientes → nome da cliente) → **Apagar dados da cliente** (só proprietárias). Confirmação digitando APAGAR.
+- Sem atendimentos: o cadastro é excluído por completo. Com atendimentos: nome, WhatsApp, e-mail, aniversário, observações, autorização de novidades, mensagens dos agendamentos e destinatário dos envios são apagados; atendimentos e valores ficam (como "Cliente anonimizada") para o controle financeiro. Eventos futuros no Google Agenda são atualizados.
+- Modo escuro: botão (lua/sol) também no topo do menu lateral, ao lado da logo; o menu rola em telas baixas.
