@@ -69,7 +69,13 @@ await step("A2", "Cliente com histórico tem os dados pessoais apagados e o hist
   if (a !== "5000|") throw new Error(`atendimento: ${a}`);
   const log = sql(`select coalesce(recipient,'') from message_logs where appointment_id='${appt}'`);
   if (log !== "") throw new Error(`destinatário ainda no histórico: ${log}`);
-  return "nome, e-mail, observações, mensagem e destinatário apagados; valor mantido";
+  await p.getByTestId("cliente-apagada").waitFor();
+  if (await p.getByText("Dados apagados").count() === 0) throw new Error("telefone fictício aparece na ficha");
+  if (await p.getByTestId("apagar-cliente").count()) throw new Error("botões continuam na ficha");
+  await p.goto(`${BASE}/admin/clientes`);
+  const html = await p.content();
+  if (html.includes(`/admin/clientes/${comHist}`)) throw new Error("cliente apagada continua na lista");
+  return "dados apagados, valor mantido, some da lista e não mostra o telefone fictício";
 });
 
 await step("T2", "Botão do modo escuro visível em notebook de tela baixa", async () => {

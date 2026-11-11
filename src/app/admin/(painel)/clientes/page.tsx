@@ -38,6 +38,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     .from("client_overview")
     .select("id, full_name, phone, last_visit, next_appointment, completed_count, total_spent_cents, created_at")
     .eq("business_id", business.id)
+    .not("phone", "like", "00%") // clientes com dados apagados (LGPD) não aparecem
     .order("full_name")
     .limit(300);
 

@@ -20,9 +20,20 @@ export function normalizeBrazilPhone(input: string): string | null {
   return d.length >= 10 && d.length <= 15 ? d : null;
 }
 
+/**
+ * Clientes com dados apagados (LGPD) recebem um telefone fictício começando com "00",
+ * porque o telefone é obrigatório e único. Telefones reais nunca começam com "00"
+ * (normalizeBrazilPhone remove esse prefixo).
+ */
+export const ANON_PHONE_PREFIX = "00";
+export function isAnonymizedPhone(phone: string | null | undefined): boolean {
+  return Boolean(phone && phone.startsWith(ANON_PHONE_PREFIX));
+}
+
 /** Formata para exibição: +55 (31) 99862-8886 */
 export function formatPhone(e164: string | null | undefined): string {
   if (!e164) return "";
+  if (isAnonymizedPhone(e164)) return "Dados apagados";
   if (e164.startsWith("55") && (e164.length === 12 || e164.length === 13)) {
     const n = e164.slice(2);
     const ddd = n.slice(0, 2);

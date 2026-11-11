@@ -75,7 +75,13 @@ export async function saveClientAction(input: ClientInput): Promise<ActionResult
 export async function searchClientsAction(q: string) {
   const ctx = await assertAdmin();
   const term = q.trim().slice(0, 60);
-  let query = ctx.supabase.from("clients").select("id, full_name, phone").eq("business_id", ctx.business.id).order("full_name").limit(12);
+  let query = ctx.supabase
+    .from("clients")
+    .select("id, full_name, phone")
+    .eq("business_id", ctx.business.id)
+    .not("phone", "like", "00%") // dados apagados (LGPD)
+    .order("full_name")
+    .limit(12);
   if (term) {
     const digits = term.replace(/\D/g, "");
     const safe = term.replace(/[%,()*]/g, " ");

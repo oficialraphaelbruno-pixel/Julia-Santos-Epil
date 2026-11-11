@@ -3,6 +3,7 @@ import { BellRing, CalendarCheck, CalendarClock, CalendarX, ClipboardList, Heart
 import { Button } from "@/components/ui/button";
 import { buildMessage, whatsappLink, type WhatsTemplate } from "@/lib/whatsapp";
 import type { Templates } from "@/lib/templates";
+import { isAnonymizedPhone } from "@/lib/phone";
 
 const ICONS: Record<WhatsTemplate, React.ComponentType<{ className?: string }>> = {
   personalizada: MessageCircle,
@@ -51,6 +52,9 @@ export function WhatsAppActions({
   custom?: Templates | null;
   extra?: { sinal?: string; pix?: string; preCare?: string | null; postCare?: string | null };
 }) {
+  if (isAnonymizedPhone(phone)) {
+    return <p className="text-[13px] text-muted">Os dados de contato desta cliente foram apagados.</p>;
+  }
   return (
     <div>
       <div className="flex flex-wrap gap-2">

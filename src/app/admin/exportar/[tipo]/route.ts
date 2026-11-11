@@ -25,6 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
       .from("client_overview")
       .select("full_name, phone, email, birthday, created_at, completed_count, total_spent_cents, last_visit, marketing_consent")
       .eq("business_id", ctx.business.id)
+      .not("phone", "like", "00%")
       .order("full_name");
     body = csv([
       ["Nome", "WhatsApp", "E-mail", "Aniversário", "Cadastro", "Atendimentos concluídos", "Total gasto (R$)", "Última visita", "Aceita mensagens"],

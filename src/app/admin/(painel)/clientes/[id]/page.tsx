@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { requireAdmin } from "@/lib/auth";
 import { formatDate, formatDateKey, formatDateTime, formatMoney, nowMs } from "@/lib/format";
-import { formatPhone } from "@/lib/phone";
+import { formatPhone, isAnonymizedPhone } from "@/lib/phone";
 import type { Appointment, Client } from "@/lib/types";
 import type { Templates } from "@/lib/templates";
 
@@ -53,15 +53,23 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm">
-            <Link href={`/admin/agenda/novo?cliente=${c.id}`}>
-              <CalendarPlus /> Agendar
-            </Link>
-          </Button>
-          <ClientProfileActions client={c} isOwner={role === "owner"} hasHistory={history.length > 0} />
-        </div>
+        {isAnonymizedPhone(c.phone) ? null : (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <Link href={`/admin/agenda/novo?cliente=${c.id}`}>
+                <CalendarPlus /> Agendar
+              </Link>
+            </Button>
+            <ClientProfileActions client={c} isOwner={role === "owner"} hasHistory={history.length > 0} />
+          </div>
+        )}
       </div>
+      {isAnonymizedPhone(c.phone) ? (
+        <div className="mb-6 rounded-2xl border border-line bg-white p-4 text-sm text-muted" data-testid="cliente-apagada">
+          Os dados pessoais desta cliente foram apagados a pedido (LGPD). Ela não aparece mais na lista de clientes; o histórico abaixo é mantido
+          apenas para o controle financeiro.
+        </div>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
         <div className="space-y-5">

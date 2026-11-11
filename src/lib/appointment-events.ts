@@ -8,7 +8,7 @@ import { businessAddress } from "@/lib/public-data";
 import { formatDate, formatDuration, formatMoney, formatTime } from "@/lib/format";
 import { PIX_KEY_TYPE_LABEL, formatPixKey } from "@/lib/pix";
 import { SITE_URL } from "@/lib/env";
-import { formatPhone } from "@/lib/phone";
+import { formatPhone, isAnonymizedPhone } from "@/lib/phone";
 
 export type AppointmentEvent = "booking" | "confirm" | "cancel" | "reschedule" | "update" | "complete" | "reminder_day_before" | "reminder_2h";
 
@@ -246,7 +246,7 @@ export async function notifyAppointment(appointmentId: string, event: Appointmen
   }
 
   // ---------- WhatsApp oficial (somente se ativado após teste real) ----------
-  if (settings.whatsapp_api_enabled && whatsappCloudConfig().configured && !(await already("whatsapp_api"))) {
+  if (settings.whatsapp_api_enabled && whatsappCloudConfig().configured && !isAnonymizedPhone(a.client.phone) && !(await already("whatsapp_api"))) {
     const r = await sendWhatsappTemplate(a.client.phone, key, [
       a.client.full_name.split(" ")[0],
       a.service_name,
