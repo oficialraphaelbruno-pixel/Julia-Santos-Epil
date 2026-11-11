@@ -56,7 +56,7 @@ await step("L1", "Painel mostra o link do cupom para copiar", async () => {
 });
 
 const phone = `3197${stamp}12`.slice(0, 11);
-await step("L2", "Cliente abre o link curto, serviço já escolhido e desconto aplicado na revisão", async () => {
+await step("L2", "Cliente abre o link curto, serviço já escolhido, e-mail obrigatório e desconto aplicado na revisão", async () => {
   const ctx = await browser.newContext({ ...devices["iPhone 13"] });
   const p = await ctx.newPage();
   await p.goto(`${BASE}/cupom/${CODE.toLowerCase()}?utm_source=instagram`);
@@ -73,6 +73,13 @@ await step("L2", "Cliente abre o link curto, serviço já escolhido e desconto a
   await p.fill("#fullName", "Cliente Link Cupom");
   await p.fill("#phone", `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`);
   await p.locator("input[name=privacy]").check();
+  // e-mail obrigatório e com checagem de erro de digitação
+  await p.getByRole("button", { name: "Revisar agendamento" }).click();
+  await p.getByText("Informe seu e-mail").waitFor();
+  await p.fill("#email", `link${stamp}@gmail.comc`);
+  await p.getByRole("button", { name: "Revisar agendamento" }).click();
+  await p.getByText(`você quis dizer link${stamp}@gmail.com?`).waitFor();
+  await p.fill("#email", `link${stamp}@exemplo.com.br`);
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByTestId("coupon-box").getByText("aplicado: −R$ 30,00").waitFor({ timeout: 10000 });
   const terms = p.getByTestId("terms-checkbox");

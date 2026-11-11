@@ -404,8 +404,13 @@ export function BookingWizard(props: Props) {
             <Field label="WhatsApp *" htmlFor="phone" error={form.formState.errors.phone?.message} hint="Com DDD. Ex.: (31) 99999-9999">
               <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" aria-invalid={!!form.formState.errors.phone} {...form.register("phone")} />
             </Field>
-            <Field label="E-mail (opcional)" htmlFor="email" error={form.formState.errors.email?.message}>
-              <Input id="email" type="email" inputMode="email" autoComplete="email" {...form.register("email")} />
+            <Field
+              label="E-mail *"
+              htmlFor="email"
+              error={form.formState.errors.email?.message}
+              hint="Você recebe a confirmação e o lembrete do seu horário por e-mail."
+            >
+              <Input id="email" type="email" inputMode="email" autoComplete="email" aria-invalid={!!form.formState.errors.email} {...form.register("email")} />
             </Field>
             <Field label="Observação (opcional)" htmlFor="message" error={form.formState.errors.message?.message}>
               <Textarea id="message" rows={3} placeholder="Alguma informação para o studio?" {...form.register("message")} />

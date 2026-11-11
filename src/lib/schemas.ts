@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { suggestEmailFix } from "@/lib/email-typos";
 import { normalizeBrazilPhone } from "@/lib/phone";
 
 export const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
@@ -26,6 +27,19 @@ export const optionalEmail = z
   .transform((v) => (v ? v.toLowerCase() : ""))
   .refine((v) => !v || z.email().safeParse(v).success, "E-mail inválido");
 
+/** E-mail obrigatório no agendamento online (confirmações e novidades), com checagem de erros comuns. */
+export const requiredEmail = z
+  .string({ error: "Informe seu e-mail" })
+  .trim()
+  .toLowerCase()
+  .min(1, "Informe seu e-mail")
+  .max(160)
+  .refine((v) => z.email().safeParse(v).success, "E-mail inválido. Confira se digitou certinho.")
+  .superRefine((v, ctx) => {
+    const fix = suggestEmailFix(v);
+    if (fix) ctx.addIssue({ code: "custom", message: `Confira o e-mail: você quis dizer ${fix}?` });
+  });
+
 export const clientBookingSchema = z.object({
   fullName: z
     .string()
@@ -34,7 +48,7 @@ export const clientBookingSchema = z.object({
     .max(120)
     .refine((v) => v.split(/\s+/).length >= 2, "Informe nome e sobrenome"),
   phone: phoneSchema,
-  email: optionalEmail,
+  email: requiredEmail,
   message: z.string().trim().max(500, "Máximo de 500 caracteres").optional().default(""),
   privacy: z.literal(true, { error: "É necessário aceitar a Política de Privacidade" }),
   marketing: z.boolean().optional().default(false),

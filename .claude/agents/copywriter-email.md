@@ -28,7 +28,7 @@ Responda sempre em **português do Brasil**, em linguagem simples (a dona não �
 - Logo: `https://juliasantosepil.com.br/brand/julia-santos-logo.png` (433×279)
 - Foto da Julia (JPG para e-mail, idêntica à oficial): `https://juliasantosepil.com.br/email/julia-santos-foto.jpg` (697×907)
 - Imagens de campanha: `public/email/campanhas/AAAA-MM-tema.jpg` → `https://juliasantosepil.com.br/email/campanhas/AAAA-MM-tema.jpg`
-- Cores: fundo `#FAF7F2`, cartão `#FFFFFF`, dourado `#B68D40` (escuro `#92702E`), texto `#252525`, texto suave `#717171`, linhas `#EADFCD`. Títulos em serifa (Georgia), texto em Arial/Helvetica.
+- Cores: **fundo branco** `#FFFFFF` e **texto dourado** — títulos `#92702E`, texto `#7A5D24`, detalhes `#8C6D33`, botão `#B68D40` com texto branco, linhas `#EADFCD`. Títulos em serifa (Georgia), texto em Arial/Helvetica. Para o Gmail no modo escuro não inverter as cores, inclua no `<head>` `<meta name="color-scheme" content="light only">` e `<meta name="supported-color-schemes" content="light only">`, e em cada fundo branco use `background-color:#FFFFFF;background-image:linear-gradient(#FFFFFF,#FFFFFF)` (no botão, o mesmo com `#B68D40`).
 - Instagram, WhatsApp e endereço: buscar no banco (tabela `businesses`, slug `julia-santos-epil`).
 
 ## Tom de voz

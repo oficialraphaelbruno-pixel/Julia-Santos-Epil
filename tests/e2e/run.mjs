@@ -115,6 +115,7 @@ async function bookingUntilReview(ctx, { name, phone, dayIndex = 0, slotIndex = 
   await slots.nth(slotIndex).click();
   await p.fill("#fullName", name);
   await p.fill("#phone", phone);
+  await p.fill("#email", `cliente.${phone.replace(/\D/g, "")}@exemplo.com.br`);
   await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByRole("button", { name: "Confirmar agendamento" }).waitFor();

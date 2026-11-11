@@ -90,6 +90,7 @@ async function reachReview(ctx, phone, name) {
   await slots.nth(name.includes("Duda") ? 2 : 0).click();
   await p.fill("#fullName", name);
   await p.fill("#phone", phone);
+  await p.fill("#email", `cupom.${phone.replace(/\D/g, "")}@exemplo.com.br`);
   await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByTestId("coupon-box").waitFor();

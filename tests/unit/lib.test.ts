@@ -91,7 +91,7 @@ describe("validação e mensagens", () => {
   it("exige consentimento de privacidade e nome completo", () => {
     const r = clientBookingSchema.safeParse({ fullName: "Maria", phone: "31998628886", privacy: false });
     expect(r.success).toBe(false);
-    const ok = clientBookingSchema.safeParse({ fullName: "Maria Silva", phone: "31998628886", privacy: true });
+    const ok = clientBookingSchema.safeParse({ fullName: "Maria Silva", phone: "31998628886", privacy: true, email: "maria@exemplo.com.br" });
     expect(ok.success && ok.data.phone).toBe("5531998628886");
   });
   it("traduz erros do banco", () => {
