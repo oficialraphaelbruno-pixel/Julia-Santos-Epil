@@ -78,11 +78,7 @@ export const getPublicBookingData = cache(async (businessId: string) => {
   };
 });
 
-export function businessAddress(b: Pick<Business, "address_line" | "address_district" | "address_city" | "address_state" | "address_zip">) {
-  const cityState = [b.address_city, b.address_state].filter(Boolean).join(" - ");
-  const parts = [b.address_line, b.address_district, cityState, b.address_zip ? `CEP ${b.address_zip}` : null].filter(Boolean);
-  return parts.length ? parts.join(", ") : null;
-}
+export { businessAddress } from "@/lib/address";
 
 export interface LinkCoupon {
   code: string;

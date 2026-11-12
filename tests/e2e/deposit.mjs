@@ -68,12 +68,13 @@ await step("S1", "Revisão mostra o sinal de 50% e exige aceitar os termos", asy
   await p.fill("#fullName", "Sofia Sinal Teste");
   await p.fill("#phone", `(31) 96666-${stamp.slice(0, 4)}`);
   await p.fill("#email", clientEmail);
-  await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByTestId("deposit-notice").waitFor();
   const btn = p.getByTestId("confirm-booking");
   if (!(await btn.isDisabled())) throw new Error("confirmar habilitado sem aceite dos termos");
   await p.getByTestId("terms-checkbox").check();
+  if (!(await btn.isDisabled())) throw new Error("confirmar habilitado sem aceite da política de privacidade");
+  await p.getByTestId("privacy-checkbox").check();
   await p.screenshot({ path: "tests/e2e/screenshots/mobile-sinal-revisao.png", fullPage: true });
   await btn.click();
   await p.getByText("Agendamento realizado com sucesso! ✨").waitFor();

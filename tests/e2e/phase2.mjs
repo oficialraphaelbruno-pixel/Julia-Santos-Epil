@@ -89,10 +89,10 @@ await step("F2.1", "Agendamento online envia e-mail real com link de gerenciamen
   await p.fill("#fullName", "Carla Email Teste");
   await p.fill("#phone", `(31) 97777-${stamp.slice(0, 4)}`);
   await p.fill("#email", clientEmail);
-  await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   const terms = p.getByTestId("terms-checkbox");
-  if (await terms.count()) await terms.check();
+  await terms.check();
+  await p.getByTestId("privacy-checkbox").check();
   await p.getByRole("button", { name: "Confirmar agendamento" }).click();
   await p.getByText("Agendamento realizado com sucesso! ✨").waitFor();
   reference = (await p.getByTestId("booking-reference").textContent()).trim();

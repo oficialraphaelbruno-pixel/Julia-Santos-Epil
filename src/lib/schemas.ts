@@ -56,6 +56,9 @@ export const clientBookingSchema = z.object({
   website: z.string().max(0).optional(), // honeypot anti-robôs
 });
 export type ClientBookingInput = z.input<typeof clientBookingSchema>;
+/** Etapa "Seus dados" do agendamento: os aceites (privacidade e termos) ficam na revisão final. */
+export const clientDetailsSchema = clientBookingSchema.omit({ privacy: true, terms: true });
+export type ClientDetailsInput = z.input<typeof clientDetailsSchema>;
 
 export const passwordSchema = z
   .string()

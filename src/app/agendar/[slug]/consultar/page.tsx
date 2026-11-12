@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BookingShell } from "@/components/booking/booking-wizard";
 import { ConsultBookings } from "@/components/booking/consult-bookings";
 import { getPublicBusiness } from "@/lib/public-data";
+import { eventLocation } from "@/lib/address";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Consultar agendamento", robots: { index: false, follow: false } };
@@ -13,7 +14,7 @@ export default async function ConsultPage({ params }: { params: Promise<{ slug: 
   if (!business) notFound();
   return (
     <BookingShell business={business}>
-      <ConsultBookings slug={business.slug} businessName={business.name} tz={business.timezone} whatsapp={business.whatsapp_phone} />
+      <ConsultBookings slug={business.slug} businessName={business.name} tz={business.timezone} whatsapp={business.whatsapp_phone} location={eventLocation(business.name, business)} />
     </BookingShell>
   );
 }

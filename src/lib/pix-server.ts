@@ -9,6 +9,8 @@ export interface DepositInfo {
   payload: string | null;
   qrSvg: string | null;
   keyDisplay: string;
+  /** Chave como deve ser colada no app do banco (ex.: +5531998628886). */
+  keyValue: string | null;
   keyType: string | null;
   holder: string | null;
   bank: string | null;
@@ -43,6 +45,7 @@ export async function buildDepositInfo(opts: {
     payload,
     qrSvg,
     keyDisplay: formatPixKey(s.pix_key, s.pix_key_type),
+    keyValue: s.pix_key ?? null,
     keyType: s.pix_key_type,
     holder: s.pix_holder_name,
     bank: s.pix_bank,

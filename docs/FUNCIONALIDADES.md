@@ -64,3 +64,9 @@
 - Na ficha da cliente (Clientes → nome da cliente) → **Apagar dados da cliente** (só proprietárias). Confirmação digitando APAGAR.
 - Sem atendimentos: o cadastro é excluído por completo. Com atendimentos: nome, WhatsApp, e-mail, aniversário, observações, autorização de novidades, mensagens dos agendamentos e destinatário dos envios são apagados; atendimentos e valores ficam (como "Cliente anonimizada") para o controle financeiro. Eventos futuros no Google Agenda são atualizados.
 - Modo escuro: botão (lua/sol) também no topo do menu lateral, ao lado da logo; o menu rola em telas baixas.
+
+## ✅ Aceites, textos legais e orientação do sinal (12/11/2026)
+- Revisão do agendamento: duas caixas obrigatórias — Termos de Uso + política de agendamento e cancelamento, e Política de Privacidade (o servidor também exige as duas).
+- Textos revisados (cópias em `docs/textos-legais/`, versão anterior em `docs/textos-legais/versao-anterior/`): Política de Privacidade (dados, e-mail, finalidades, bases legais, fornecedores, retenção, direitos), Termos de Uso (sinal, cancelamento, arrependimento, cupons) e política de cancelamento exibida no agendamento. Editáveis no painel.
+- "Adicionar ao Google Agenda" e arquivo .ics com o local preenchido (nome + endereço do studio) na confirmação, na página do agendamento e na consulta.
+- Cartão do sinal com passo a passo: Pix Copia e Cola, QR Code ou chave (com botão de copiar), conferência da favorecida e envio do comprovante.

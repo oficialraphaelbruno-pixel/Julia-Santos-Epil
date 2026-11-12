@@ -35,9 +35,10 @@ import {
   type CouponPreview,
   type Slot,
 } from "@/app/agendar/actions";
-import { clientBookingSchema, type ClientBookingInput } from "@/lib/schemas";
+import { clientDetailsSchema, type ClientDetailsInput } from "@/lib/schemas";
 import { formatDuration, formatLongDate, formatMoney, formatTime, formatDate } from "@/lib/format";
 import { googleCalendarTemplateLink } from "@/lib/ics";
+import { eventLocation } from "@/lib/address";
 import { whatsappLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import type { PublicBusiness, PublicService, PublicSettings } from "@/lib/public-data";
@@ -75,6 +76,7 @@ export function BookingWizard(props: Props) {
   const [result, setResult] = useState<BookingCreated | null>(null);
   const [pending, startTransition] = useTransition();
   const [termsOk, setTermsOk] = useState(false);
+  const [privacyOk, setPrivacyOk] = useState(false);
   const depositRequired = Boolean(settings.deposit_enabled);
   const linkCoupon = props.linkCoupon ?? null;
   const [couponInput, setCouponInput] = useState(linkCoupon?.code ?? "");
@@ -86,8 +88,8 @@ export function BookingWizard(props: Props) {
   const finalPrice = coupon ? coupon.finalCents : (service?.price_cents ?? 0);
   const depositPreview = Math.round((finalPrice * settings.deposit_percent) / 100);
 
-  const form = useForm<ClientBookingInput>({
-    resolver: zodResolver(clientBookingSchema),
+  const form = useForm<ClientDetailsInput>({
+    resolver: zodResolver(clientDetailsSchema),
     defaultValues: { fullName: "", phone: "", email: "", message: "", marketing: false, website: "" },
     mode: "onTouched",
   });
@@ -131,7 +133,7 @@ export function BookingWizard(props: Props) {
         slug: business.slug,
         serviceId: service.id,
         startsAt: slot.start,
-        client: { ...form.getValues(), terms: termsOk },
+        client: { ...form.getValues(), privacy: privacyOk, terms: termsOk },
         couponCode: coupon?.code,
       });
       if (res.ok && res.data) {
@@ -154,7 +156,7 @@ export function BookingWizard(props: Props) {
         }
         if (res.fieldErrors) {
           for (const [k, v] of Object.entries(res.fieldErrors)) {
-            if (k !== "_code") form.setError(k as keyof ClientBookingInput, { message: v });
+            if (k !== "_code") form.setError(k as keyof ClientDetailsInput, { message: v });
           }
           if (Object.keys(res.fieldErrors).some((k) => k !== "_code")) setStep(3);
         }
@@ -170,6 +172,7 @@ export function BookingWizard(props: Props) {
       uid: result.reference,
       title: `${service.name} — ${business.name}`,
       description: `Referência: ${result.reference}\nGerenciar: ${manageUrl}`,
+      location: eventLocation(business.name, business),
       startsAt: slot.start,
       endsAt: slot.end,
     };
@@ -420,17 +423,6 @@ export function BookingWizard(props: Props) {
 
             <div className="space-y-3 rounded-2xl bg-ivory p-4">
               <label className="flex items-start gap-3 text-sm leading-relaxed text-ink/80">
-                <input type="checkbox" className="mt-1 size-4 accent-[#b68d40]" {...form.register("privacy")} />
-                <span>
-                  Li e concordo com a{" "}
-                  <Link href="/privacidade" target="_blank" className="font-medium text-gold-dark underline underline-offset-2">
-                    Política de Privacidade
-                  </Link>
-                  . Autorizo o uso dos meus dados para agendar e gerenciar meu atendimento. *
-                </span>
-              </label>
-              {form.formState.errors.privacy ? <p className="text-[13px] text-rose-600">{form.formState.errors.privacy.message}</p> : null}
-              <label className="flex items-start gap-3 text-sm leading-relaxed text-ink/80">
                 <input type="checkbox" className="mt-1 size-4 accent-[#b68d40]" {...form.register("marketing")} />
                 <span>
                   <b className="font-medium text-ink">Aceito receber novidades</b>, promoções e cupons por e-mail e WhatsApp. (Opcional: você pode
@@ -523,9 +515,11 @@ export function BookingWizard(props: Props) {
               {form.getValues("email") ? <p className="text-ink/70">{form.getValues("email")}</p> : null}
             </div>
             {settings.cancellation_policy ? (
-              <div className="mt-5 rounded-2xl bg-ivory p-4 text-[13px] leading-relaxed text-ink/75">
-                <p className="mb-1 font-medium text-ink">Política de cancelamento</p>
-                <p className="whitespace-pre-line">{settings.cancellation_policy}</p>
+              <div className="mt-5 rounded-2xl bg-ivory p-4 text-[13px] leading-relaxed text-ink/75" data-testid="cancellation-policy">
+                <p className="mb-1 font-medium text-ink">Política de agendamento e cancelamento</p>
+                <div className="max-h-64 overflow-y-auto pr-1">
+                  <p className="whitespace-pre-line">{settings.cancellation_policy}</p>
+                </div>
               </div>
             ) : null}
             {depositRequired && finalPrice > 0 ? (
@@ -545,8 +539,8 @@ export function BookingWizard(props: Props) {
             ) : !settings.auto_confirm ? (
               <p className="mt-5 text-[13px] text-muted">Seu horário ficará reservado e o studio confirmará o atendimento.</p>
             ) : null}
-            {depositRequired ? (
-              <label className="mt-4 flex items-start gap-3 text-sm leading-relaxed text-ink/80">
+            <div className="mt-5 space-y-3 rounded-2xl border border-line p-4">
+              <label className="flex items-start gap-3 text-sm leading-relaxed text-ink/80">
                 <input
                   type="checkbox"
                   className="mt-1 size-4 accent-[#b68d40]"
@@ -558,16 +552,33 @@ export function BookingWizard(props: Props) {
                   Li e aceito os{" "}
                   <Link href="/termos" target="_blank" className="font-medium text-gold-dark underline underline-offset-2">
                     Termos de Uso
-                  </Link>
-                  , incluindo as regras do sinal. *
+                  </Link>{" "}
+                  e a política de agendamento e cancelamento{depositRequired ? ", incluindo as regras do sinal" : ""}. *
                 </span>
               </label>
-            ) : null}
+              <label className="flex items-start gap-3 text-sm leading-relaxed text-ink/80">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 accent-[#b68d40]"
+                  checked={privacyOk}
+                  onChange={(e) => setPrivacyOk(e.target.checked)}
+                  data-testid="privacy-checkbox"
+                />
+                <span>
+                  Li e aceito a{" "}
+                  <Link href="/privacidade" target="_blank" className="font-medium text-gold-dark underline underline-offset-2">
+                    Política de Privacidade
+                  </Link>{" "}
+                  e autorizo o uso dos meus dados (nome, WhatsApp e e-mail) para agendar, confirmar e lembrar meu atendimento. *
+                </span>
+              </label>
+              {!termsOk || !privacyOk ? <p className="text-[12.5px] text-muted">Marque as duas opções para confirmar o agendamento.</p> : null}
+            </div>
             <Button
               type="button"
               size="lg"
               className="mt-6 w-full"
-              disabled={pending || (depositRequired && !termsOk)}
+              disabled={pending || !termsOk || !privacyOk}
               onClick={submit}
               data-testid="confirm-booking"
             >

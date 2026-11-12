@@ -91,7 +91,6 @@ async function reachReview(ctx, phone, name) {
   await p.fill("#fullName", name);
   await p.fill("#phone", phone);
   await p.fill("#email", `cupom.${phone.replace(/\D/g, "")}@exemplo.com.br`);
-  await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByTestId("coupon-box").waitFor();
   return p;
@@ -112,7 +111,8 @@ await step("C2", "Cliente aplica o cupom no site: desconto, sinal recalculado e 
   if (!deposit.includes("R$ 32,00")) throw new Error(`sinal não recalculado: ${deposit}`);
   await p.screenshot({ path: "tests/e2e/screenshots/mobile-cupom.png", fullPage: true });
   const terms = p.getByTestId("terms-checkbox");
-  if (await terms.count()) await terms.check();
+  await terms.check();
+  await p.getByTestId("privacy-checkbox").check();
   await p.getByTestId("confirm-booking").click();
   await p.getByText("Agendamento realizado com sucesso! ✨").waitFor();
   reference = (await p.getByTestId("booking-reference").textContent()).trim();

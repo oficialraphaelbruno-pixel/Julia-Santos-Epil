@@ -18,11 +18,14 @@ export function ConsultBookings({
   businessName,
   tz,
   whatsapp,
+  location,
 }: {
   slug: string;
   businessName: string;
   tz: string;
   whatsapp: string | null;
+  /** Nome + endereço do studio, para o evento de agenda. */
+  location: string | null;
 }) {
   const [contact, setContact] = useState("");
   const [fullName, setFullName] = useState("");
@@ -35,6 +38,7 @@ export function ConsultBookings({
       uid: `${b.reference}@studio-manager`,
       title: `${b.serviceName} — ${businessName}`,
       description: `Referência: ${b.reference}`,
+      location,
       startsAt: b.startsAt,
       endsAt: b.endsAt,
     });
@@ -57,7 +61,7 @@ export function ConsultBookings({
         </div>
         {found.map((b) => {
           const active = b.status === "pending" || b.status === "confirmed";
-          const event = { uid: b.reference, title: `${b.serviceName} — ${businessName}`, description: `Referência: ${b.reference}`, startsAt: b.startsAt, endsAt: b.endsAt };
+          const event = { uid: b.reference, title: `${b.serviceName} — ${businessName}`, description: `Referência: ${b.reference}`, location, startsAt: b.startsAt, endsAt: b.endsAt };
           const minutes = Math.round((Date.parse(b.endsAt) - Date.parse(b.startsAt)) / 60000);
           return (
             <div key={b.reference} className="space-y-4">

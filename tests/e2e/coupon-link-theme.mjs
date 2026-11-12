@@ -72,7 +72,6 @@ await step("L2", "Cliente abre o link curto, serviço já escolhido, e-mail obri
   await slots.first().click();
   await p.fill("#fullName", "Cliente Link Cupom");
   await p.fill("#phone", `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`);
-  await p.locator("input[name=privacy]").check();
   // e-mail obrigatório e com checagem de erro de digitação
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByText("Informe seu e-mail").waitFor();
@@ -83,7 +82,8 @@ await step("L2", "Cliente abre o link curto, serviço já escolhido, e-mail obri
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByTestId("coupon-box").getByText("aplicado: −R$ 30,00").waitFor({ timeout: 10000 });
   const terms = p.getByTestId("terms-checkbox");
-  if (await terms.count()) await terms.check();
+  await terms.check();
+  await p.getByTestId("privacy-checkbox").check();
   await p.getByTestId("confirm-booking").click();
   await p.getByText("Agendamento realizado com sucesso! ✨").waitFor({ timeout: 20000 });
   const row = sql(`select coupon_code || '|' || discount_cents || '|' || price_cents from appointments where service_id='${svc}' order by created_at desc limit 1`);

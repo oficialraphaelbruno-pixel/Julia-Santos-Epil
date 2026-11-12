@@ -78,7 +78,7 @@ export async function syncAppointmentToGoogle(appointmentId: string) {
         summary: `${a.service_name} — ${a.client?.full_name ?? "Cliente"}`,
         description: [
           `Referência: ${a.reference_code}`,
-          a.client ? `Cliente: ${a.client.full_name} · WhatsApp +${a.client.phone}` : null,
+          a.client && !isAnonymizedPhone(a.client.phone) ? `Cliente: ${a.client.full_name} · WhatsApp +${a.client.phone}` : null,
           `Valor: ${formatMoney(a.price_cents)}`,
           `Painel: ${SITE_URL}/admin/agenda/${a.id}`,
         ]

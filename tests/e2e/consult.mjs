@@ -34,10 +34,10 @@ await step("Q1", "Cliente agenda informando e-mail", async () => {
   await p.fill("#fullName", "Júlia Consulta Teste");
   await p.fill("#phone", `(31) ${phoneDigits.slice(0, 5)}-${phoneDigits.slice(5)}`);
   await p.fill("#email", email);
-  await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   const terms = p.getByTestId("terms-checkbox");
-  if (await terms.count()) await terms.check();
+  await terms.check();
+  await p.getByTestId("privacy-checkbox").check();
   await p.getByTestId("confirm-booking").click();
   try {
     await p.getByText("Agendamento realizado com sucesso! ✨").waitFor({ timeout: 20000 });
@@ -70,8 +70,14 @@ await step("Q3", "E-mail + nome (sem acento e maiúsculas) mostra o agendamento,
   await p.getByTestId(`consulta-${reference}`).waitFor();
   const href = await p.getByTestId("consulta-google").getAttribute("href");
   if (!href.startsWith("https://calendar.google.com/calendar/render?action=TEMPLATE")) throw new Error("link do Google ausente");
+  const loc = new URL(href).searchParams.get("location") ?? "";
+  const addr = sql(`select address_line from businesses where slug='julia-santos-epil'`);
+  if (addr && !loc.includes(addr)) throw new Error(`evento sem endereço: "${loc}"`);
   const deposit = sql(`select deposit_status from appointments where reference_code='${reference}'`);
-  if (deposit === "aguardando") await p.getByTestId("deposit-card").waitFor();
+  if (deposit === "aguardando") {
+    await p.getByTestId("deposit-card").waitFor();
+    await p.getByTestId("deposit-steps").getByText("Como pagar o sinal").waitFor();
+  }
   await p.screenshot({ path: "tests/e2e/screenshots/mobile-consulta.png", fullPage: true });
   await p.close();
   return `sinal: ${deposit}`;

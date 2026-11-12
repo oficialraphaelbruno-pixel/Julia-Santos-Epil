@@ -116,11 +116,11 @@ async function bookingUntilReview(ctx, { name, phone, dayIndex = 0, slotIndex = 
   await p.fill("#fullName", name);
   await p.fill("#phone", phone);
   await p.fill("#email", `cliente.${phone.replace(/\D/g, "")}@exemplo.com.br`);
-  await p.locator("input[name=privacy]").check();
   await p.getByRole("button", { name: "Revisar agendamento" }).click();
   await p.getByRole("button", { name: "Confirmar agendamento" }).waitFor();
   const terms = p.getByTestId("terms-checkbox");
-  if (await terms.count()) await terms.check();
+  await terms.check();
+  await p.getByTestId("privacy-checkbox").check();
   return { p, time };
 }
 
@@ -231,7 +231,7 @@ await step("TESTE 8b", "Cliente reagenda e cancela pelo link seguro", async () =
   await p.getByText("Agendamento realizado com sucesso! ✨").waitFor();
   const ref = (await p.getByTestId("booking-reference").textContent()).trim();
   await p.getByTestId("manage-link").click();
-  await p.getByText(ref).waitFor();
+  await p.getByText(ref, { exact: true }).first().waitFor();
   await p.getByRole("button", { name: "Reagendar" }).click();
   await p.locator("[role=gridcell]:not([disabled])").nth(3).click();
   const slots = p.locator("button[aria-pressed], button[aria-selected]").filter({ hasText: /^\d{2}:\d{2}$/ });
@@ -249,7 +249,7 @@ await step("TESTE 8b", "Cliente reagenda e cancela pelo link seguro", async () =
 });
 
 await step("TESTE 9", "Botão de WhatsApp abre a conversa com a mensagem personalizada", async () => {
-  const id = sql(`select a.id from appointments a join clients c on c.id=a.client_id where c.full_name in ('Ana Corrida Teste','Bia Corrida Teste') and a.status='pending' limit 1`);
+  const id = sql(`select a.id from appointments a join clients c on c.id=a.client_id where c.full_name in ('Ana Corrida Teste','Bia Corrida Teste') and a.status='pending' order by a.created_at desc limit 1`);
   await ap.goto(`${BASE}/admin/agenda/${id}`);
   const href = await ap.getByTestId("wa-confirmacao").getAttribute("href");
   const url = new URL(href);

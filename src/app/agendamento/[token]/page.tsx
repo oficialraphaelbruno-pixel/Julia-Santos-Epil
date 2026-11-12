@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { getBookingByToken } from "@/lib/manage-booking";
 import { addDaysKey, formatDate, formatDuration, formatLongDate, formatMoney, formatTime, todayKey } from "@/lib/format";
 import { googleCalendarTemplateLink } from "@/lib/ics";
+import { eventLocation } from "@/lib/address";
 import { whatsappLink } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/env";
 
@@ -87,6 +88,7 @@ export default async function ManageBookingPage({ params }: { params: Promise<{ 
                   uid: b.reference_code,
                   title: `${b.service_name} — ${b.business.name}`,
                   description: `Referência: ${b.reference_code}\nGerenciar: ${SITE_URL}/agendamento/${token}`,
+                  location: eventLocation(b.business.name, b.business),
                   startsAt: b.starts_at,
                   endsAt: b.ends_at,
                 })}

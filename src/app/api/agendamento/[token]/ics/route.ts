@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBookingByToken } from "@/lib/manage-booking";
 import { buildIcs } from "@/lib/ics";
-import { businessAddress } from "@/lib/public-data";
+import { eventLocation } from "@/lib/address";
 import { SITE_URL } from "@/lib/env";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     uid: `${b.id}@studio-manager`,
     title: `${b.service_name} — ${b.business.name}`,
     description: `Referência: ${b.reference_code}\nGerenciar: ${SITE_URL}/agendamento/${token}`,
-    location: businessAddress(b.business),
+    location: eventLocation(b.business.name, b.business),
     startsAt: b.starts_at,
     endsAt: b.ends_at,
   });

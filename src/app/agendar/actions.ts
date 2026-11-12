@@ -121,8 +121,8 @@ export async function createBookingAction(input: {
   const business = await getPublicBusiness(base.data.slug);
   if (!business) return { ok: false, error: "Empresa não encontrada." };
   const { settings } = await getPublicBookingData(business.id);
-  if (settings?.deposit_enabled && !parsed.data.terms) {
-    return { ok: false, error: "É necessário aceitar os Termos de Uso e as regras do sinal.", fieldErrors: { terms: "Aceite os termos para continuar" } };
+  if (!parsed.data.terms) {
+    return { ok: false, error: "É necessário aceitar os Termos de Uso e a política de cancelamento.", fieldErrors: { terms: "Aceite os termos para continuar" } };
   }
 
   // Agenda externa (Google): recusa conflito; se a consulta falhar, o pedido fica pendente.

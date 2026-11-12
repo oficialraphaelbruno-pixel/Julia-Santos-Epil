@@ -1,0 +1,62 @@
+Esta Política de Privacidade explica como a Julia Santos Epil trata os dados pessoais de quem agenda atendimentos por este site, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
+
+Última atualização: 12/11/2026.
+
+1. Quem é a responsável pelos seus dados
+
+Julia Santos Epil, Rua Bom Pastor, 447, São Benedito, Santa Luzia - MG. Contato para assuntos de privacidade: juliasantosepil@gmail.com ou pelo WhatsApp oficial informado neste site.
+
+2. Quais dados coletamos
+
+• Dados que você informa no agendamento: nome completo, número de WhatsApp, e-mail e observações opcionais.
+• Dados do atendimento: serviço escolhido, data e horário, valores, cupom utilizado, situação do sinal e histórico de atendimentos.
+• Autorizações: o registro do aceite desta política e dos Termos de Uso e, se você marcar, a autorização para receber novidades.
+• Dados técnicos mínimos de segurança: o endereço de conexão (IP) é usado de forma protegida, apenas para impedir abusos (como excesso de tentativas), sem identificar você.
+
+Não usamos cookies de publicidade nem ferramentas de rastreamento no site de agendamento.
+
+3. Para que usamos seus dados
+
+• Realizar e gerenciar o agendamento: reservar o horário, confirmar, remarcar e cancelar.
+• Enviar mensagens sobre o seu atendimento por e-mail e WhatsApp: confirmação, instruções e cobrança do sinal (Pix), lembretes, remarcações, cancelamentos e orientações de cuidados antes e depois do procedimento.
+• Permitir que você consulte o seu agendamento pelo site informando e-mail (ou WhatsApp) e nome completo.
+• Controle financeiro e cumprimento de obrigações legais.
+• Enviar novidades, promoções e cupons por e-mail e WhatsApp, somente se você autorizar.
+
+4. Bases legais (LGPD)
+
+• Execução do contrato e procedimentos preliminares: agendamento, mensagens sobre o atendimento e pagamento do sinal.
+• Consentimento: envio de novidades, promoções e cupons. Você pode retirar a autorização a qualquer momento.
+• Cumprimento de obrigação legal e exercício regular de direitos: registros financeiros e de atendimentos.
+• Legítimo interesse: segurança do site e prevenção de fraudes.
+
+5. E-mails e mensagens
+
+• O e-mail é obrigatório no agendamento online para que você receba a confirmação, as instruções do sinal e os lembretes do seu horário.
+• Mensagens de novidades e promoções só são enviadas a quem marcou "Aceito receber novidades". Todo e-mail promocional traz o link "Não quero mais receber"; também é possível pedir o descadastro pelo WhatsApp ou e-mail.
+
+6. Com quem compartilhamos
+
+Seus dados não são vendidos nem cedidos para fins comerciais. Para o site funcionar, utilizamos fornecedores de tecnologia que tratam os dados apenas conforme nossas instruções:
+• Supabase: banco de dados e acesso ao painel;
+• Vercel: hospedagem do site;
+• Resend: envio dos e-mails;
+• Google (Google Agenda): registro dos atendimentos na agenda da profissional (serviço, horário e nome da cliente);
+• WhatsApp (Meta): conversas e mensagens sobre o atendimento.
+Alguns desses fornecedores podem armazenar dados fora do Brasil, com medidas de segurança e cláusulas contratuais de proteção. O pagamento do sinal é feito por Pix diretamente no aplicativo do seu banco: não recebemos nem armazenamos dados bancários ou de cartão.
+
+7. Por quanto tempo guardamos
+
+Pelo tempo necessário para os atendimentos e enquanto houver relacionamento, e pelos prazos exigidos por lei para registros financeiros. Quando você pede a exclusão, apagamos ou anonimizamos seus dados pessoais; os registros de atendimentos e valores podem ser mantidos de forma anônima, sem identificar você, para fins contábeis.
+
+8. Segurança
+
+O site usa conexão segura (HTTPS). O acesso ao painel é restrito à equipe do studio, com senha individual e verificação em duas etapas disponível. Cada agendamento tem um link pessoal e intransferível.
+
+9. Seus direitos
+
+Conforme o artigo 18 da LGPD, você pode solicitar: confirmação de que tratamos seus dados, acesso, correção, anonimização ou exclusão, portabilidade, informação sobre compartilhamento e a revogação do consentimento. Faça o pedido pelo e-mail juliasantosepil@gmail.com ou pelo WhatsApp oficial; responderemos em até 15 dias. Você também pode procurar a Autoridade Nacional de Proteção de Dados (ANPD).
+
+10. Alterações
+
+Esta política pode ser atualizada. A versão vigente fica sempre disponível nesta página, com a data da última atualização.
