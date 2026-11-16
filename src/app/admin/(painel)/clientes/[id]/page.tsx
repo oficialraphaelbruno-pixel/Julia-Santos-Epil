@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarPlus, Cake, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Ban, CalendarPlus, Cake, Mail, Phone } from "lucide-react";
 import { ClientProfileActions } from "@/components/admin/client-profile-actions";
+import { ClientPhoto } from "@/components/admin/client-photo";
+import { signedClientPhotos } from "@/lib/client-photos";
 import { WhatsAppActions } from "@/components/admin/whatsapp-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { requireAdmin } from "@/lib/auth";
-import { formatDate, formatDateKey, formatDateTime, formatMoney, nowMs } from "@/lib/format";
+import { formatDate, formatDateKey, formatDateTime, formatMoney, nowMs, todayKey } from "@/lib/format";
+import { ageOn, daysUntilBirthday } from "@/lib/birthday";
 import { formatPhone, isAnonymizedPhone } from "@/lib/phone";
 import type { Appointment, Client } from "@/lib/types";
 import type { Templates } from "@/lib/templates";
@@ -33,6 +36,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const past = history.filter((a) => !upcoming.includes(a));
   const { data: ns } = await supabase.from("notification_settings").select("templates").eq("business_id", business.id).maybeSingle();
   const c = client as Client & { last_visit: string | null; completed_count: number; total_spent_cents: number; marketing_consent_at: string | null };
+  const photoUrl = c.photo_path ? ((await signedClientPhotos(supabase, [c.photo_path])).get(c.photo_path) ?? null) : null;
+  const anonymized = isAnonymizedPhone(c.phone);
+  const today = todayKey(tz);
   const inactive = c.last_visit && now - new Date(c.last_visit).getTime() > 90 * 864e5 && upcoming.length === 0;
 
   return (
@@ -43,7 +49,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <span className="grid size-14 place-items-center rounded-full bg-cream font-display text-2xl text-gold-dark">{c.full_name.charAt(0)}</span>
+          <ClientPhoto clientId={c.id} name={c.full_name} url={photoUrl} canEdit={!anonymized} />
           <div>
             <h1 className="text-3xl text-ink">{c.full_name}</h1>
             <p className="text-sm text-muted">
@@ -64,6 +70,15 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </div>
         )}
       </div>
+      {c.blocked_at && !anonymized ? (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800" data-testid="cliente-bloqueada">
+          <Ban className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="font-medium">Cliente bloqueada desde {formatDate(c.blocked_at, tz)}: não consegue agendar pelo site.</p>
+            {c.blocked_reason ? <p className="mt-1 whitespace-pre-line">Motivo: {c.blocked_reason}</p> : null}
+          </div>
+        </div>
+      ) : null}
       {isAnonymizedPhone(c.phone) ? (
         <div className="mb-6 rounded-2xl border border-line bg-white p-4 text-sm text-muted" data-testid="cliente-apagada">
           Os dados pessoais desta cliente foram apagados a pedido (LGPD). Ela não aparece mais na lista de clientes; o histórico abaixo é mantido
@@ -84,8 +99,20 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                 </p>
               ) : null}
               {c.birthday ? (
-                <p className="flex items-center gap-3">
-                  <Cake className="size-4 text-gold" /> {formatDateKey(c.birthday, "dd 'de' MMMM")}
+                <p className="flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="cliente-aniversario">
+                  <Cake className="size-4 text-gold" /> Aniversário: {formatDateKey(c.birthday, "dd 'de' MMMM")}
+                  {ageOn(c.birthday, today) !== null ? <span className="text-muted">({ageOn(c.birthday, today)} anos)</span> : null}
+                  {daysUntilBirthday(c.birthday, today) === 0 ? (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[12px] font-medium text-amber-800">Hoje! 🎉</span>
+                  ) : daysUntilBirthday(c.birthday, today) <= 7 ? (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[12px] font-medium text-amber-800">
+                      em {daysUntilBirthday(c.birthday, today)} dia(s)
+                    </span>
+                  ) : null}
+                </p>
+              ) : !anonymized ? (
+                <p className="flex items-center gap-3 text-muted">
+                  <Cake className="size-4 text-gold" /> Aniversário não informado (adicione em Editar)
                 </p>
               ) : null}
               <p className="text-[13px] text-muted">

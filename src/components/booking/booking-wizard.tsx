@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
   CalendarDays,
+  Gift,
   CalendarPlus,
   Check,
   Clock,
@@ -41,7 +42,7 @@ import { googleCalendarTemplateLink } from "@/lib/ics";
 import { eventLocation } from "@/lib/address";
 import { whatsappLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
-import type { PublicBusiness, PublicService, PublicSettings } from "@/lib/public-data";
+import type { PublicBusiness, PublicOffer, PublicService, PublicSettings } from "@/lib/public-data";
 import type { Category } from "@/lib/types";
 
 const STEPS = ["Serviço", "Data", "Horário", "Seus dados", "Revisão"];
@@ -59,6 +60,8 @@ interface Props {
   /** Cupom recebido por link de divulgação (?cupom=). */
   linkCoupon?: { code: string; label: string; serviceNames: string[] | null } | null;
   linkCouponUnavailable?: boolean;
+  /** Ofertas (order bump) configuradas no painel. */
+  offers?: PublicOffer[];
 }
 
 export function BookingWizard(props: Props) {
@@ -85,7 +88,11 @@ export function BookingWizard(props: Props) {
   const [coupon, setCoupon] = useState<CouponPreview | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
-  const finalPrice = coupon ? coupon.finalCents : (service?.price_cents ?? 0);
+  const [offerIds, setOfferIds] = useState<string[]>([]);
+  const serviceOffers = useMemo(() => (props.offers ?? []).filter((o) => o.serviceId === service?.id), [props.offers, service?.id]);
+  const chosenOffers = serviceOffers.filter((o) => offerIds.includes(o.id));
+  const extrasPrice = chosenOffers.reduce((t, o) => t + o.priceCents, 0);
+  const finalPrice = (coupon ? coupon.finalCents : (service?.price_cents ?? 0)) + extrasPrice;
   const depositPreview = Math.round((finalPrice * settings.deposit_percent) / 100);
 
   const form = useForm<ClientDetailsInput>({
@@ -99,8 +106,8 @@ export function BookingWizard(props: Props) {
   }, [step, result]);
 
   const loadDays = useCallback(
-    (from: string, to: string) => (service ? getAvailableDaysAction(business.slug, service.id, from, to) : Promise.resolve([])),
-    [business.slug, service],
+    (from: string, to: string) => (service ? getAvailableDaysAction(business.slug, service.id, from, to, offerIds) : Promise.resolve([])),
+    [business.slug, service, offerIds],
   );
 
   const loadSlots = useCallback(
@@ -108,12 +115,12 @@ export function BookingWizard(props: Props) {
       if (!service) return;
       setSlotsLoading(true);
       try {
-        setSlots(await getAvailableSlotsAction(business.slug, service.id, d));
+        setSlots(await getAvailableSlotsAction(business.slug, service.id, d, offerIds));
       } finally {
         setSlotsLoading(false);
       }
     },
-    [business.slug, service],
+    [business.slug, service, offerIds],
   );
 
   const servicesByCategory = useMemo(() => {
@@ -135,6 +142,7 @@ export function BookingWizard(props: Props) {
         startsAt: slot.start,
         client: { ...form.getValues(), privacy: privacyOk, terms: termsOk },
         couponCode: coupon?.code,
+        offerIds,
       });
       if (res.ok && res.data) {
         setResult(res.data);
@@ -198,7 +206,7 @@ export function BookingWizard(props: Props) {
               {result.reference}
             </span>
           </div>
-          <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} />
+          <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} extras={chosenOffers} />
         </div>
 
         {result.deposit ? (
@@ -306,6 +314,7 @@ export function BookingWizard(props: Props) {
                         key={s.id}
                         type="button"
                         onClick={() => {
+                          if (service?.id !== s.id) setOfferIds([]);
                           setService(s);
                           setDay(null);
                           setSlot(null);
@@ -343,7 +352,59 @@ export function BookingWizard(props: Props) {
       {step === 1 && service ? (
         <section className="animate-fade-up">
           <StepTitle icon={<CalendarDays />} title="Escolha a data" subtitle={service.name} />
+          {serviceOffers.length ? (
+            <div className="mb-6 rounded-3xl border-2 border-dashed border-champagne bg-white p-5 shadow-soft" data-testid="offers">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-dark">
+                <Gift className="size-4" /> Oferta especial para você
+              </p>
+              <div className="mt-3 space-y-3">
+                {serviceOffers.map((o) => {
+                  const checked = offerIds.includes(o.id);
+                  const save = o.originalPriceCents - o.priceCents;
+                  return (
+                    <label
+                      key={o.id}
+                      className={cn(
+                        "flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition",
+                        checked ? "border-gold bg-ivory" : "border-line hover:border-champagne",
+                      )}
+                      data-testid={`offer-${o.id}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-1 size-5 accent-[#b68d40]"
+                        checked={checked}
+                        onChange={(e) => {
+                          setOfferIds((ids) => (e.target.checked ? [...ids, o.id] : ids.filter((x) => x !== o.id)));
+                          setDay(null);
+                          setSlot(null);
+                          setSlots([]);
+                        }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium text-ink">{o.headline || `Aproveite e faça também ${o.name}`}</span>
+                        <span className="mt-0.5 block text-[13px] text-muted">
+                          {o.name} · +{formatDuration(o.durationMinutes)} no mesmo horário
+                        </span>
+                        <span className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
+                          {save > 0 ? <span className="text-[13px] text-muted line-through">{formatMoney(o.originalPriceCents)}</span> : null}
+                          <span className="font-display text-lg text-gold-dark">+ {formatMoney(o.priceCents)}</span>
+                          {save > 0 ? (
+                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[12px] font-medium text-emerald-800">
+                              economize {formatMoney(save)}
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-[12.5px] text-muted">Marque se quiser incluir. Os horários abaixo já consideram o tempo extra.</p>
+            </div>
+          ) : null}
           <BookingCalendar
+            key={offerIds.join(",") || "sem-oferta"}
             todayKey={todayKey}
             maxKey={maxKey}
             selected={day}
@@ -442,7 +503,7 @@ export function BookingWizard(props: Props) {
         <section className="animate-fade-up">
           <StepTitle icon={<Check />} title="Revise seu agendamento" />
           <div className="rounded-3xl border border-line bg-white p-6 shadow-soft">
-            <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} />
+            <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} extras={chosenOffers} />
             <div className="mt-5 rounded-2xl border border-dashed border-champagne/70 p-4" data-testid="coupon-box">
               {coupon ? (
                 <div className="flex items-center justify-between gap-3 text-sm">
@@ -598,25 +659,33 @@ function Summary({
   tz,
   professionalName,
   coupon,
+  extras = [],
 }: {
   service: PublicService;
   slot: Slot;
   tz: string;
   professionalName: string | null;
   coupon?: CouponPreview | null;
+  extras?: PublicOffer[];
 }) {
+  const extrasPrice = extras.reduce((t, o) => t + o.priceCents, 0);
+  const extrasMinutes = extras.reduce((t, o) => t + o.durationMinutes, 0);
+  const mainPrice = coupon ? coupon.finalCents : service.price_cents;
   const rows = [
-    ["Serviço", service.name],
+    ["Serviço", extras.length ? [service.name, ...extras.map((o) => o.name)].join(" + ") : service.name],
     ["Data", `${formatDate(slot.start, tz)} (${formatLongDate(slot.start, tz).split(",")[0]})`],
     ["Horário", `${formatTime(slot.start, tz)} às ${formatTime(slot.end, tz)}`],
-    ["Duração", formatDuration(service.duration_minutes)],
+    ["Duração", formatDuration(service.duration_minutes + extrasMinutes)],
     ...(coupon
       ? [
-          ["Valor do serviço", formatMoney(coupon.originalCents)],
+          [extras.length ? `Valor de ${service.name}` : "Valor do serviço", formatMoney(coupon.originalCents)],
           [`Desconto (${coupon.code})`, `− ${formatMoney(coupon.discountCents)}`],
-          ["Valor final", formatMoney(coupon.finalCents)],
         ]
-      : [["Valor", formatMoney(service.price_cents)]]),
+      : extras.length
+        ? [[service.name, formatMoney(service.price_cents)]]
+        : []),
+    ...extras.map((o) => [`${o.name} (oferta)`, formatMoney(o.priceCents)]),
+    [coupon || extras.length ? "Valor final" : "Valor", formatMoney(mainPrice + extrasPrice)],
     ...(professionalName ? [["Profissional", professionalName]] : []),
   ];
   return (

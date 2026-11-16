@@ -146,7 +146,12 @@ export function AppointmentForm({
                       className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-ivory"
                       onClick={() => setV({ ...v, client: c })}
                     >
-                      <span className="font-medium">{c.full_name}</span>
+                      <span className="font-medium">
+                        {c.full_name}
+                        {"blocked_at" in c && c.blocked_at ? (
+                          <span className="ml-2 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700">Bloqueada</span>
+                        ) : null}
+                      </span>
                       <span className="text-muted">{formatPhone(c.phone)}</span>
                     </button>
                   </li>

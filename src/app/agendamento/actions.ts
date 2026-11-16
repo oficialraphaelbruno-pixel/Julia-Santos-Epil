@@ -19,11 +19,12 @@ export async function rescheduleDaysAction(token: string, from: string, to: stri
   if (!(await checkRateLimit("dias", 90, 60))) return [];
   const booking = await getBookingByToken(token);
   if (!booking?.canReschedule || !booking.service_id) return [];
-  const { data } = await createServiceClient().rpc("get_available_days", {
+  const { data } = await createServiceClient().rpc("get_available_days_v2", {
     p_business_id: booking.business.id,
     p_service_id: booking.service_id,
     p_from: from,
     p_to: to,
+    p_extra_minutes: booking.extraMinutes,
     p_exclude_appointment_id: booking.id,
   });
   return (data as string[]) ?? [];
@@ -34,10 +35,11 @@ export async function rescheduleSlotsAction(token: string, day: string): Promise
   if (!(await checkRateLimit("horarios", 120, 60))) return [];
   const booking = await getBookingByToken(token);
   if (!booking?.canReschedule || !booking.service_id) return [];
-  const { data } = await createServiceClient().rpc("get_available_slots", {
+  const { data } = await createServiceClient().rpc("get_available_slots_v2", {
     p_business_id: booking.business.id,
     p_service_id: booking.service_id,
     p_day: day,
+    p_extra_minutes: booking.extraMinutes,
     p_exclude_appointment_id: booking.id,
     p_online: true,
   });

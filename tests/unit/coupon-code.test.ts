@@ -36,3 +36,18 @@ describe("e-mail obrigatório no agendamento", () => {
     expect(clientBookingSchema.safeParse({ ...base, email: "ana@hotmal.com" }).success).toBe(false);
   });
 });
+
+import { ageOn, daysUntilBirthday } from "@/lib/birthday";
+
+describe("aniversário", () => {
+  it("conta os dias até o próximo aniversário", () => {
+    expect(daysUntilBirthday("1990-11-16", "2026-11-16")).toBe(0);
+    expect(daysUntilBirthday("1990-11-20", "2026-11-16")).toBe(4);
+    expect(daysUntilBirthday("1990-01-02", "2026-12-31")).toBe(2);
+    expect(daysUntilBirthday("1992-02-29", "2027-02-27")).toBe(1);
+  });
+  it("calcula a idade", () => {
+    expect(ageOn("1990-11-16", "2026-11-16")).toBe(36);
+    expect(ageOn("1990-11-17", "2026-11-16")).toBe(35);
+  });
+});

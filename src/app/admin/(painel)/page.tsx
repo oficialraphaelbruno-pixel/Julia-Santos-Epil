@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  Cake,
   CalendarCheck2,
   CalendarClock,
   CalendarDays,
@@ -23,7 +24,8 @@ import { StatusBadge } from "@/components/ui/badge";
 import { requireAdmin } from "@/lib/auth";
 import { formatMoney, formatTime, formatDateKey, toLocalDateKey, todayKey } from "@/lib/format";
 import { SITE_URL } from "@/lib/env";
-import { whatsappShareLink } from "@/lib/whatsapp";
+import { whatsappLink, whatsappShareLink } from "@/lib/whatsapp";
+import { daysUntilBirthday } from "@/lib/birthday";
 import type { AppointmentStatus } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Painel de Controle" };
@@ -47,7 +49,7 @@ export default async function DashboardPage() {
   const ctx = await requireAdmin();
   const tz = ctx.business.timezone;
   const today = todayKey(tz);
-  const [{ data: dash }, { data: upcoming }, { count: servicesCount }, { count: openDays }, { data: deposits }] = await Promise.all([
+  const [{ data: dash }, { data: upcoming }, { count: servicesCount }, { count: openDays }, { data: deposits }, { data: bdays }] = await Promise.all([
     ctx.supabase.rpc("admin_dashboard", { p_business_id: ctx.business.id }),
     ctx.supabase
       .from("appointments")
@@ -68,7 +70,18 @@ export default async function DashboardPage() {
       .gte("starts_at", new Date().toISOString())
       .order("starts_at")
       .limit(10),
+    ctx.supabase
+      .from("clients")
+      .select("id, full_name, phone, birthday")
+      .eq("business_id", ctx.business.id)
+      .not("birthday", "is", null)
+      .not("phone", "like", "00%"),
   ]);
+  // Aniversariantes de hoje e dos próximos 7 dias
+  const birthdays = ((bdays ?? []) as { id: string; full_name: string; phone: string; birthday: string }[])
+    .map((c) => ({ ...c, inDays: daysUntilBirthday(c.birthday, today) }))
+    .filter((c) => c.inDays <= 7)
+    .sort((a, b) => a.inDays - b.inDays);
   const pendingDeposits = (deposits ?? []) as unknown as { id: string; starts_at: string; deposit_cents: number; deposit_due_at: string | null; client: { full_name: string } | null }[];
   const d = (dash ?? {}) as Dashboard;
   const bookingUrl = `${SITE_URL}/agendar/${ctx.business.slug}`;
@@ -126,6 +139,42 @@ export default async function DashboardPage() {
                     {s.done ? <CheckCircle2 className="size-5 text-emerald-600" /> : <Circle className="size-5 text-champagne" />}
                     <span className={s.done ? "text-muted line-through" : "text-ink"}>{s.label}</span>
                   </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {birthdays.length ? (
+        <Card className="mb-6" data-testid="birthdays">
+          <CardContent>
+            <p className="flex items-center gap-2 font-display text-lg">
+              <Cake className="size-5 text-gold" /> Aniversariantes da semana ({birthdays.length})
+            </p>
+            <p className="text-sm text-muted">Mande um carinho no dia: um gesto simples que a cliente lembra.</p>
+            <ul className="mt-3 divide-y divide-line/70">
+              {birthdays.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                  <Link href={`/admin/clientes/${c.id}`} className="font-medium text-ink hover:underline">
+                    {c.full_name}
+                  </Link>
+                  <span className="flex items-center gap-3">
+                    <span className={c.inDays === 0 ? "font-medium text-gold-dark" : "text-muted"}>
+                      {c.inDays === 0 ? "Hoje! 🎉" : `${formatDateKey(c.birthday, "dd/MM")} · em ${c.inDays} dia(s)`}
+                    </span>
+                    <a
+                      href={whatsappLink(
+                        c.phone,
+                        `Feliz aniversário, ${c.full_name.split(" ")[0]}! 🎉💛 Que seu novo ciclo seja cheio de cuidado, saúde e autoestima. Um beijo da ${ctx.business.name} ✨`,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full bg-[#1f9d55] px-3 py-1 text-[12px] font-medium text-white hover:bg-[#178246]"
+                    >
+                      Parabéns pelo WhatsApp
+                    </a>
+                  </span>
                 </li>
               ))}
             </ul>

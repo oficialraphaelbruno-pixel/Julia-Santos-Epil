@@ -42,9 +42,22 @@ export const getPublicBusiness = cache(async (slug: string) => {
   return data as PublicBusiness | null;
 });
 
+/** Oferta (order bump) exibida no agendamento: serviço extra com preço especial. */
+export interface PublicOffer {
+  id: string;
+  serviceId: string;
+  offerServiceId: string;
+  name: string;
+  description: string | null;
+  headline: string | null;
+  priceCents: number;
+  originalPriceCents: number;
+  durationMinutes: number;
+}
+
 export const getPublicBookingData = cache(async (businessId: string) => {
   const db = createServiceClient();
-  const [settings, services, categories, professional] = await Promise.all([
+  const [settings, services, categories, professional, offers] = await Promise.all([
     db
       .from("booking_settings")
       .select(
@@ -69,14 +82,52 @@ export const getPublicBookingData = cache(async (businessId: string) => {
       .order("created_at")
       .limit(1)
       .maybeSingle(),
+    db
+      .from("service_offers")
+      .select("id, service_id, offer_service_id, offer_price_cents, headline, sort_order, offer:services!service_offers_business_id_offer_service_id_fkey(name, description, price_cents, duration_minutes, status)")
+      .eq("business_id", businessId)
+      .eq("active", true)
+      .order("sort_order"),
   ]);
+  type OfferRow = {
+    id: string;
+    service_id: string;
+    offer_service_id: string;
+    offer_price_cents: number;
+    headline: string | null;
+    offer: { name: string; description: string | null; price_cents: number; duration_minutes: number; status: string } | null;
+  };
+  const publicOffers: PublicOffer[] = ((offers.data ?? []) as unknown as OfferRow[])
+    .filter((o) => o.offer && o.offer.status === "active")
+    .map((o) => ({
+      id: o.id,
+      serviceId: o.service_id,
+      offerServiceId: o.offer_service_id,
+      name: o.offer!.name,
+      description: o.offer!.description,
+      headline: o.headline,
+      priceCents: o.offer_price_cents,
+      originalPriceCents: o.offer!.price_cents,
+      durationMinutes: o.offer!.duration_minutes,
+    }));
   return {
     settings: settings.data as PublicSettings | null,
     services: (services.data ?? []) as PublicService[],
     categories: (categories.data ?? []) as Category[],
     professionalName: (professional.data?.display_name as string | undefined) ?? null,
+    offers: publicOffers,
   };
 });
+
+/** Valida ofertas escolhidas para um serviço e devolve os minutos extras (ou null se inválidas). */
+export async function resolveOffers(businessId: string, serviceId: string, offerIds: string[]) {
+  if (!offerIds.length) return { minutes: 0, ids: [] as string[] };
+  const { offers } = await getPublicBookingData(businessId);
+  const ids = [...new Set(offerIds)];
+  const chosen = offers.filter((o) => o.serviceId === serviceId && ids.includes(o.id));
+  if (chosen.length !== ids.length) return null;
+  return { minutes: chosen.reduce((t, o) => t + o.durationMinutes, 0), ids };
+}
 
 export { businessAddress } from "@/lib/address";
 

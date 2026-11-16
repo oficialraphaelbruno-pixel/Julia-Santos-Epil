@@ -77,7 +77,7 @@ export async function searchClientsAction(q: string) {
   const term = q.trim().slice(0, 60);
   let query = ctx.supabase
     .from("clients")
-    .select("id, full_name, phone")
+    .select("id, full_name, phone, blocked_at")
     .eq("business_id", ctx.business.id)
     .not("phone", "like", "00%") // dados apagados (LGPD)
     .order("full_name")
@@ -102,7 +102,9 @@ export async function deleteClientAction(id: string): Promise<ActionResult> {
         error: "Esta cliente possui histórico de atendimentos. Use \"Apagar dados da cliente\" para remover os dados pessoais mantendo o histórico.",
       };
     }
+    const { data: photo } = await ctx.supabase.from("clients").select("photo_path").eq("id", id).maybeSingle();
     const { error } = await ctx.supabase.from("clients").delete().eq("id", id);
+    if (!error && photo?.photo_path) await ctx.supabase.storage.from("client-photos").remove([photo.photo_path]);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
     revalidatePath("/admin/clientes");
     return { ok: true, message: "Cliente excluída." };
@@ -116,6 +118,8 @@ export async function anonymizeClientAction(id: string): Promise<ActionResult> {
   try {
     const ctx = await assertAdmin({ owner: true });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Cliente inválida." };
+    const { data: photo } = await ctx.supabase.from("clients").select("photo_path").eq("id", id).eq("business_id", ctx.business.id).maybeSingle();
+    if (photo?.photo_path) await ctx.supabase.storage.from("client-photos").remove([photo.photo_path]);
     const { randomInt } = await import("node:crypto");
     const fakePhone = "00" + Array.from({ length: 13 }, () => randomInt(0, 10)).join("");
     const { error } = await ctx.supabase
@@ -128,6 +132,8 @@ export async function anonymizeClientAction(id: string): Promise<ActionResult> {
         notes: null,
         marketing_consent: false,
         marketing_consent_at: null,
+        photo_path: null,
+        blocked_reason: null,
       })
       .eq("id", id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
@@ -144,6 +150,78 @@ export async function anonymizeClientAction(id: string): Promise<ActionResult> {
     revalidatePath("/admin/clientes");
     revalidatePath(`/admin/clientes/${id}`);
     return { ok: true, message: "Dados pessoais apagados. O histórico de atendimentos e valores foi mantido." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}
+
+// ---------------------------------------------------------------------
+// Foto da cliente (área privada) e bloqueio
+// ---------------------------------------------------------------------
+const PHOTO_TYPES = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" } as const;
+
+export async function uploadClientPhotoAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin();
+    const clientId = String(formData.get("clientId") ?? "");
+    const file = formData.get("file");
+    if (!z.uuid().safeParse(clientId).success) return { ok: false, error: "Cliente inválida." };
+    if (!(file instanceof File)) return { ok: false, error: "Selecione uma foto." };
+    const ext = PHOTO_TYPES[file.type as keyof typeof PHOTO_TYPES];
+    if (!ext) return { ok: false, error: "Formato não suportado. Use JPG, PNG ou WEBP." };
+    if (file.size > 5 * 1024 * 1024) return { ok: false, error: "A foto deve ter no máximo 5 MB." };
+    const { data: client } = await ctx.supabase.from("clients").select("id, photo_path, phone").eq("id", clientId).eq("business_id", ctx.business.id).maybeSingle();
+    if (!client) return { ok: false, error: "Cliente não encontrada." };
+    if (client.phone?.startsWith("00")) return { ok: false, error: "Os dados desta cliente foram apagados." };
+    const { randomUUID } = await import("node:crypto");
+    const path = `${ctx.business.id}/${clientId}-${randomUUID()}.${ext}`;
+    const { error: upErr } = await ctx.supabase.storage.from("client-photos").upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) return { ok: false, error: "Falha ao enviar a foto." };
+    const { error } = await ctx.supabase.from("clients").update({ photo_path: path }).eq("id", clientId);
+    if (error) {
+      await ctx.supabase.storage.from("client-photos").remove([path]);
+      return { ok: false, error: friendlyDbError(error.message) };
+    }
+    if (client.photo_path) await ctx.supabase.storage.from("client-photos").remove([client.photo_path]);
+    revalidatePath(`/admin/clientes/${clientId}`);
+    revalidatePath("/admin/clientes");
+    return { ok: true, message: "Foto salva." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Falha ao enviar a foto." };
+  }
+}
+
+export async function removeClientPhotoAction(clientId: string): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin();
+    if (!z.uuid().safeParse(clientId).success) return { ok: false, error: "Cliente inválida." };
+    const { data: client } = await ctx.supabase.from("clients").select("photo_path").eq("id", clientId).eq("business_id", ctx.business.id).maybeSingle();
+    if (!client) return { ok: false, error: "Cliente não encontrada." };
+    if (client.photo_path) await ctx.supabase.storage.from("client-photos").remove([client.photo_path]);
+    await ctx.supabase.from("clients").update({ photo_path: null }).eq("id", clientId);
+    revalidatePath(`/admin/clientes/${clientId}`);
+    revalidatePath("/admin/clientes");
+    return { ok: true, message: "Foto removida." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}
+
+/** Bloqueio: a cliente não consegue agendar online (por WhatsApp ou e-mail). O motivo é interno. */
+export async function setClientBlockedAction(clientId: string, blocked: boolean, reason = ""): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin({ owner: true });
+    if (!z.uuid().safeParse(clientId).success) return { ok: false, error: "Cliente inválida." };
+    const r = reason.trim().slice(0, 500);
+    const { error } = await ctx.supabase
+      .from("clients")
+      .update(blocked ? { blocked_at: new Date().toISOString(), blocked_reason: r || null } : { blocked_at: null, blocked_reason: null })
+      .eq("id", clientId)
+      .eq("business_id", ctx.business.id);
+    if (error) return { ok: false, error: friendlyDbError(error.message) };
+    revalidatePath(`/admin/clientes/${clientId}`);
+    revalidatePath("/admin/clientes");
+    return { ok: true, message: blocked ? "Cliente bloqueada. Ela não conseguirá agendar pelo site." : "Cliente desbloqueada." };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro." };
   }

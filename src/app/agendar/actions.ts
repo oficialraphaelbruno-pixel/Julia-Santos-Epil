@@ -14,7 +14,7 @@ import { clientBookingSchema, dateKeySchema, slugSchema } from "@/lib/schemas";
 import type { ActionResult } from "@/lib/action";
 import { zodFieldErrors } from "@/lib/action";
 import { buildDepositInfo, type DepositInfo } from "@/lib/pix-server";
-import { getPublicBookingData } from "@/lib/public-data";
+import { getPublicBookingData, resolveOffers } from "@/lib/public-data";
 
 export interface Slot {
   start: string;
@@ -23,33 +23,43 @@ export interface Slot {
 
 const uuid = z.uuid();
 
-export async function getAvailableDaysAction(slug: string, serviceId: string, from: string, to: string): Promise<string[]> {
+const offerIdsSchema = z.array(z.uuid()).max(5);
+
+export async function getAvailableDaysAction(slug: string, serviceId: string, from: string, to: string, offerIds: string[] = []): Promise<string[]> {
   if (!slugSchema.safeParse(slug).success || !uuid.safeParse(serviceId).success) return [];
   if (!dateKeySchema.safeParse(from).success || !dateKeySchema.safeParse(to).success) return [];
+  if (!offerIdsSchema.safeParse(offerIds).success) return [];
   if (!(await checkRateLimit("dias", 90, 60))) return [];
   const business = await getPublicBusiness(slug);
   if (!business) return [];
+  const offers = await resolveOffers(business.id, serviceId, offerIds);
+  if (!offers) return [];
   const db = createServiceClient();
-  const { data, error } = await db.rpc("get_available_days", {
+  const { data, error } = await db.rpc("get_available_days_v2", {
     p_business_id: business.id,
     p_service_id: serviceId,
     p_from: from,
     p_to: to,
+    p_extra_minutes: offers.minutes,
   });
   if (error) return [];
   return (data as string[]) ?? [];
 }
 
-export async function getAvailableSlotsAction(slug: string, serviceId: string, day: string): Promise<Slot[]> {
+export async function getAvailableSlotsAction(slug: string, serviceId: string, day: string, offerIds: string[] = []): Promise<Slot[]> {
   if (!slugSchema.safeParse(slug).success || !uuid.safeParse(serviceId).success || !dateKeySchema.safeParse(day).success) return [];
+  if (!offerIdsSchema.safeParse(offerIds).success) return [];
   if (!(await checkRateLimit("horarios", 120, 60))) return [];
   const business = await getPublicBusiness(slug);
   if (!business) return [];
+  const offers = await resolveOffers(business.id, serviceId, offerIds);
+  if (!offers) return [];
   const db = createServiceClient();
-  const { data, error } = await db.rpc("get_available_slots", {
+  const { data, error } = await db.rpc("get_available_slots_v2", {
     p_business_id: business.id,
     p_service_id: serviceId,
     p_day: day,
+    p_extra_minutes: offers.minutes,
     p_exclude_appointment_id: null,
     p_online: true,
   });
@@ -102,6 +112,7 @@ export async function createBookingAction(input: {
   startsAt: string;
   client: unknown;
   couponCode?: string;
+  offerIds?: string[];
 }): Promise<ActionResult<BookingCreated>> {
   const base = z
     .object({ slug: slugSchema, serviceId: uuid, startsAt: z.iso.datetime({ offset: true }) })
@@ -125,15 +136,19 @@ export async function createBookingAction(input: {
     return { ok: false, error: "É necessário aceitar os Termos de Uso e a política de cancelamento.", fieldErrors: { terms: "Aceite os termos para continuar" } };
   }
 
+  const offerIds = offerIdsSchema.safeParse(input.offerIds ?? []);
+  const offers = offerIds.success ? await resolveOffers(business.id, base.data.serviceId, offerIds.data) : null;
+  if (!offers) return { ok: false, error: friendlyDbError("OFERTA_INDISPONIVEL") };
+
   // Agenda externa (Google): recusa conflito; se a consulta falhar, o pedido fica pendente.
-  const external = await checkSlotAgainstGoogle(business.id, base.data.serviceId, base.data.startsAt);
+  const external = await checkSlotAgainstGoogle(business.id, base.data.serviceId, base.data.startsAt, offers.minutes);
   if (external.busy) {
     return { ok: false, error: friendlyDbError("HORARIO_INDISPONIVEL"), fieldErrors: { _code: "HORARIO_INDISPONIVEL" } };
   }
 
   const { token, hash } = newManageToken();
   const db = createServiceClient();
-  const { data, error } = await db.rpc("create_online_booking_v2", {
+  const { data, error } = await db.rpc("create_online_booking_v3", {
     p_business_id: business.id,
     p_service_id: base.data.serviceId,
     p_starts_at: base.data.startsAt,
@@ -144,6 +159,7 @@ export async function createBookingAction(input: {
     p_client_message: parsed.data.message ?? "",
     p_manage_token_hash: hash,
     p_coupon_code: input.couponCode ? String(input.couponCode).slice(0, 30) : null,
+    p_offer_ids: offers.ids.length ? offers.ids : null,
   });
 
   if (error) {

@@ -185,3 +185,75 @@ export async function moveCategoryAction(id: string, direction: "up" | "down"): 
     return { ok: false, error: e instanceof Error ? e.message : "Erro." };
   }
 }
+
+// ---------------------------------------------------------------------
+// Ofertas (order bump)
+// ---------------------------------------------------------------------
+const offerSchema = z
+  .object({
+    id: z.uuid().optional().nullable(),
+    serviceId: z.uuid({ error: "Escolha o serviço principal" }),
+    offerServiceId: z.uuid({ error: "Escolha o serviço oferecido" }),
+    price: z.string().refine((v) => parseMoneyToCents(v) !== null, "Valor inválido"),
+    headline: z.string().trim().max(120).optional().default(""),
+    active: z.boolean(),
+  })
+  .refine((v) => v.serviceId !== v.offerServiceId, { message: "Escolha um serviço diferente do principal", path: ["offerServiceId"] });
+export type OfferInput = z.input<typeof offerSchema>;
+
+export async function saveOfferAction(input: OfferInput): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin({ owner: true });
+    const parsed = offerSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(parsed.error.issues) };
+    const v = parsed.data;
+    const price = parseMoneyToCents(v.price)!;
+    const { data: offered } = await ctx.supabase.from("services").select("price_cents").eq("id", v.offerServiceId).eq("business_id", ctx.business.id).maybeSingle();
+    if (!offered) return { ok: false, error: "Serviço não encontrado." };
+    const row = {
+      business_id: ctx.business.id,
+      service_id: v.serviceId,
+      offer_service_id: v.offerServiceId,
+      offer_price_cents: price,
+      headline: v.headline || null,
+      active: v.active,
+    };
+    const { error } = v.id
+      ? await ctx.supabase.from("service_offers").update(row).eq("id", v.id)
+      : await ctx.supabase.from("service_offers").insert(row);
+    if (error) {
+      if (error.message.includes("duplicate key")) return { ok: false, error: "Já existe uma oferta com esses dois serviços." };
+      return { ok: false, error: friendlyDbError(error.message) };
+    }
+    refresh();
+    return { ok: true, message: v.id ? "Oferta atualizada." : "Oferta criada." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}
+
+export async function setOfferActiveAction(id: string, active: boolean): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin({ owner: true });
+    if (!z.uuid().safeParse(id).success) return { ok: false, error: "Oferta inválida." };
+    const { error } = await ctx.supabase.from("service_offers").update({ active }).eq("id", id).eq("business_id", ctx.business.id);
+    if (error) return { ok: false, error: friendlyDbError(error.message) };
+    refresh();
+    return { ok: true, message: active ? "Oferta ativada." : "Oferta pausada." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}
+
+export async function deleteOfferAction(id: string): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin({ owner: true });
+    if (!z.uuid().safeParse(id).success) return { ok: false, error: "Oferta inválida." };
+    const { error } = await ctx.supabase.from("service_offers").delete().eq("id", id).eq("business_id", ctx.business.id);
+    if (error) return { ok: false, error: friendlyDbError(error.message) };
+    refresh();
+    return { ok: true, message: "Oferta removida." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro." };
+  }
+}

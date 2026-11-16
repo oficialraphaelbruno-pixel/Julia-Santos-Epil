@@ -31,10 +31,10 @@ export async function filterSlotsByGoogle(businessId: string, serviceId: string,
 }
 
 /** Verifica um único horário contra o Google. busy=true se houver conflito externo. */
-export async function checkSlotAgainstGoogle(businessId: string, serviceId: string, start: string) {
+export async function checkSlotAgainstGoogle(businessId: string, serviceId: string, start: string, extraMinutes = 0) {
   const db = createServiceClient();
   const { data: svc } = await db.from("services").select("duration_minutes").eq("id", serviceId).maybeSingle();
-  const end = new Date(Date.parse(start) + (svc?.duration_minutes ?? 60) * 60000).toISOString();
+  const end = new Date(Date.parse(start) + ((svc?.duration_minutes ?? 60) + extraMinutes) * 60000).toISOString();
   const r = await filterSlotsByGoogle(businessId, serviceId, [{ start, end }]);
   return { busy: r.slots.length === 0, externalVerified: r.externalVerified, connected: r.connected };
 }

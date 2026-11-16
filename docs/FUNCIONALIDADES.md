@@ -70,3 +70,9 @@
 - Textos revisados (cópias em `docs/textos-legais/`, versão anterior em `docs/textos-legais/versao-anterior/`): Política de Privacidade (dados, e-mail, finalidades, bases legais, fornecedores, retenção, direitos), Termos de Uso (sinal, cancelamento, arrependimento, cupons) e política de cancelamento exibida no agendamento. Editáveis no painel.
 - "Adicionar ao Google Agenda" e arquivo .ics com o local preenchido (nome + endereço do studio) na confirmação, na página do agendamento e na consulta.
 - Cartão do sinal com passo a passo: Pix Copia e Cola, QR Code ou chave (com botão de copiar), conferência da favorecida e envio do comprovante.
+
+## ✅ Foto, bloqueio, ofertas e aniversários (16/11/2026)
+- **Foto da cliente**: na ficha (Clientes → cliente → Adicionar foto). Arquivo em área privada do Supabase (bucket `client-photos`), exibido só por link temporário; miniatura na lista. Removida ao apagar os dados da cliente. Política de Privacidade atualizada.
+- **Bloquear cliente**: ficha → Bloquear (motivo interno opcional). A cliente bloqueada não agenda pelo site — nem com outro número, se usar o mesmo e-mail — e vê só "fale com o studio pelo WhatsApp". Etiqueta "Bloqueada" na lista, filtro "Bloqueadas", aviso no agendamento e na busca de clientes. Desbloquear a qualquer momento.
+- **Ofertas (order bump)**: Serviços → "Ofertas no agendamento". Ex.: quem agenda Nariz vê "adicione Buço por R$ 15 (de R$ 25)". O extra é feito no mesmo horário: os horários livres já consideram a duração total; valor, sinal e duração somam; o agendamento fica como "Nariz + Buço". Remarcação e edição pelo painel mantêm a duração completa.
+- **Aniversários**: card "Aniversariantes da semana" no Painel de Controle com botão "Parabéns pelo WhatsApp"; filtro "Aniversariantes do mês" e etiqueta 🎂 na lista; idade e contagem regressiva na ficha. A data é preenchida em Editar cliente.

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Plus, Repeat, Search, UserX, Users } from "lucide-react";
+import { Ban, Cake, ChevronRight, Plus, Repeat, Search, UserX, Users } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { requireAdmin } from "@/lib/auth";
-import { formatDate, formatMoney, nowMs } from "@/lib/format";
+import { formatDate, formatDateKey, formatMoney, nowMs, todayKey } from "@/lib/format";
+import { birthdayInMonth, daysUntilBirthday } from "@/lib/birthday";
+import { signedClientPhotos } from "@/lib/client-photos";
 import { formatPhone } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +23,17 @@ interface Row {
   completed_count: number;
   total_spent_cents: number;
   created_at: string;
+  birthday: string | null;
+  photo_path: string | null;
+  blocked_at: string | null;
 }
 
 const FILTERS = [
   { key: "", label: "Todas", icon: Users },
   { key: "recorrentes", label: "Recorrentes", icon: Repeat },
   { key: "inativas", label: "Inativas (90+ dias)", icon: UserX },
+  { key: "aniversariantes", label: "Aniversariantes do mês", icon: Cake },
+  { key: "bloqueadas", label: "Bloqueadas", icon: Ban },
 ];
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ q?: string; filtro?: string }> }) {
@@ -36,7 +43,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
 
   let query = supabase
     .from("client_overview")
-    .select("id, full_name, phone, last_visit, next_appointment, completed_count, total_spent_cents, created_at")
+    .select("id, full_name, phone, last_visit, next_appointment, completed_count, total_spent_cents, created_at, birthday, photo_path, blocked_at")
     .eq("business_id", business.id)
     .not("phone", "like", "00%") // clientes com dados apagados (LGPD) não aparecem
     .order("full_name")
@@ -51,8 +58,17 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   if (filtro === "inativas") {
     query = query.lt("last_visit", new Date(nowMs() - 90 * 864e5).toISOString()).is("next_appointment", null);
   }
+  if (filtro === "bloqueadas") query = query.not("blocked_at", "is", null);
+  if (filtro === "aniversariantes") query = query.not("birthday", "is", null);
   const { data } = await query;
-  const rows = (data ?? []) as Row[];
+  const today = todayKey(tz);
+  let rows = (data ?? []) as Row[];
+  if (filtro === "aniversariantes") {
+    rows = rows
+      .filter((c) => c.birthday && birthdayInMonth(c.birthday, today))
+      .sort((a, b) => a.birthday!.slice(5).localeCompare(b.birthday!.slice(5)));
+  }
+  const photos = await signedClientPhotos(supabase, rows.map((c) => c.photo_path));
 
   return (
     <>
@@ -104,11 +120,29 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <div className="card-premium divide-y divide-line/70 overflow-hidden">
           {rows.map((c) => (
             <Link key={c.id} href={`/admin/clientes/${c.id}`} className="flex items-center gap-4 px-4 py-3.5 transition hover:bg-ivory/60 sm:px-6">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-cream font-display text-gold-dark">
-                {c.full_name.charAt(0).toUpperCase()}
-              </span>
+              {c.photo_path && photos.get(c.photo_path) ? (
+                // eslint-disable-next-line @next/next/no-img-element -- link temporário do Storage
+                <img src={photos.get(c.photo_path)} alt="" className="size-10 shrink-0 rounded-full object-cover" />
+              ) : (
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-cream font-display text-gold-dark">
+                  {c.full_name.charAt(0).toUpperCase()}
+                </span>
+              )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-ink">{c.full_name}</p>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-medium text-ink">
+                  <span className="truncate">{c.full_name}</span>
+                  {c.blocked_at ? (
+                    <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700" data-testid="badge-bloqueada">
+                      Bloqueada
+                    </span>
+                  ) : null}
+                  {c.birthday && birthdayInMonth(c.birthday, today) ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                      <Cake className="size-3" />
+                      {daysUntilBirthday(c.birthday, today) === 0 ? "Hoje!" : formatDateKey(c.birthday, "dd/MM")}
+                    </span>
+                  ) : null}
+                </p>
                 <p className="text-[13px] text-muted">{formatPhone(c.phone)}</p>
               </div>
               <div className="hidden text-right text-[13px] sm:block">

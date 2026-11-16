@@ -30,13 +30,13 @@ export default async function AppointmentPage({ params, searchParams }: { params
   const tz = ctx.business.timezone;
   const { data } = await ctx.supabase
     .from("appointments")
-    .select("*, client:clients(id, full_name, phone, email), professional:professionals(id, display_name)")
+    .select("*, client:clients(id, full_name, phone, email, blocked_at, blocked_reason), professional:professionals(id, display_name)")
     .eq("id", id)
     .eq("business_id", ctx.business.id)
     .maybeSingle();
   if (!data) notFound();
   const a = data as Appointment & {
-    client: { id: string; full_name: string; phone: string; email: string | null };
+    client: { id: string; full_name: string; phone: string; email: string | null; blocked_at: string | null; blocked_reason: string | null };
     professional: { id: string; display_name: string } | null;
   };
 
@@ -126,6 +126,12 @@ export default async function AppointmentPage({ params, searchParams }: { params
         <AppointmentStatusActions id={a.id} status={a.status} />
       </div>
 
+      {a.client.blocked_at ? (
+        <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" data-testid="agendamento-cliente-bloqueada">
+          Atenção: esta cliente está bloqueada{a.client.blocked_reason ? ` (${a.client.blocked_reason})` : ""}.
+        </div>
+      ) : null}
+
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <CardContent className="space-y-4">
@@ -163,6 +169,21 @@ export default async function AppointmentPage({ params, searchParams }: { params
                 <dt className="text-muted">Duração</dt>
                 <dd>{formatDuration(a.duration_minutes)}</dd>
               </div>
+              {a.extras?.length ? (
+                <div className="col-span-2" data-testid="agendamento-extras">
+                  <dt className="text-muted">Serviços extras (oferta)</dt>
+                  <dd>
+                    {a.extras.map((e) => (
+                      <span key={e.offer_id} className="block">
+                        {e.name}: {formatMoney(e.price_cents)}
+                        {e.original_price_cents > e.price_cents ? (
+                          <span className="text-[12px] text-muted"> (de {formatMoney(e.original_price_cents)})</span>
+                        ) : null}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              ) : null}
               {a.professional ? (
                 <div>
                   <dt className="text-muted">Profissional</dt>

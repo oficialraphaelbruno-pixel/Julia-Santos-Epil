@@ -264,6 +264,81 @@ begin
 end $$;
 reset role;
 
+-- ---------- Ofertas (order bump), bloqueio e remarcação com serviço extra ----------
+insert into public.services (id, business_id, name, price_cents, duration_minutes)
+values ('00000000-0000-0000-0000-0000000000c3', '00000000-0000-0000-0000-00000000000a', 'Extra Teste', 3000, 30);
+insert into public.service_offers (id, business_id, service_id, offer_service_id, offer_price_cents)
+values ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-00000000000a',
+        '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000c3', 2000);
+
+do $$
+declare
+  v_day date := (select d from t_ctx) + 5;
+  v_base int; v_extra int; v_r record; v_a public.appointments%rowtype;
+begin
+  select count(*) into v_base from public.get_available_slots_v2('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', v_day, 0);
+  select count(*) into v_extra from public.get_available_slots_v2('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', v_day, 30);
+  assert v_extra < v_base, format('minutos extras não reduziram os horários (%s/%s)', v_extra, v_base);
+  assert not exists (select 1 from public.get_available_slots_v2('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', v_day, 30) g
+                      where g.slot_start = (v_day + time '11:00') at time zone 'America/Sao_Paulo'), '11:00 + 90 min invadiu o almoço';
+
+  select * into v_r from public.create_online_booking_v3('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+     (v_day + time '09:00') at time zone 'America/Sao_Paulo', 'Cliente Oferta', '5531922220001', 'oferta@teste.local', false, null, 'hash-oferta',
+     null, array['00000000-0000-0000-0000-0000000000e1']::uuid[]);
+  select * into v_a from public.appointments where id = v_r.appointment_id;
+  assert v_a.price_cents = 10000 and v_a.duration_minutes = 90 and v_a.original_price_cents = 11000, format('oferta não somada: %s/%s/%s', v_a.price_cents, v_a.duration_minutes, v_a.original_price_cents);
+  assert v_a.ends_at = v_a.starts_at + interval '90 minutes', 'fim não considera o extra';
+  assert v_a.service_name = 'Serviço Teste + Extra Teste' and jsonb_array_length(v_a.extras) = 1, 'nome/extras não gravados';
+
+  begin
+    perform public.create_online_booking_v3('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c3',
+       (v_day + time '15:00') at time zone 'America/Sao_Paulo', 'Cliente Oferta Dois', '5531922220002', null, false, null, 'hash-oferta-2',
+       null, array['00000000-0000-0000-0000-0000000000e1']::uuid[]);
+    raise exception 'FALHOU: aceitou oferta de outro serviço';
+  exception when others then assert sqlerrm = 'OFERTA_INDISPONIVEL', sqlerrm; end;
+
+  -- remarcação pela cliente respeita a duração total (90 min)
+  begin
+    perform public.reschedule_booking_by_token('hash-oferta', (v_day + time '11:00') at time zone 'America/Sao_Paulo');
+    raise exception 'FALHOU: remarcou invadindo o almoço';
+  exception when others then assert sqlerrm = 'HORARIO_INDISPONIVEL', sqlerrm; end;
+  perform public.reschedule_booking_by_token('hash-oferta', (v_day + time '13:00') at time zone 'America/Sao_Paulo');
+  select * into v_a from public.appointments where id = v_r.appointment_id;
+  assert v_a.ends_at = (v_day + time '14:30') at time zone 'America/Sao_Paulo', 'remarcação perdeu a duração do extra';
+
+  -- bloqueio: por WhatsApp e por e-mail
+  insert into public.clients (business_id, full_name, phone, email, blocked_at, blocked_reason)
+  values ('00000000-0000-0000-0000-00000000000a', 'Cliente Bloqueada', '5531933330001', 'bloqueada@teste.local', now(), 'teste');
+  begin
+    perform public.create_online_booking_v3('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+       (v_day + time '16:00') at time zone 'America/Sao_Paulo', 'Cliente Bloqueada', '5531933330001', null, false, null, 'hash-bloq-1');
+    raise exception 'FALHOU: bloqueada agendou pelo WhatsApp';
+  exception when others then assert sqlerrm = 'CLIENTE_BLOQUEADO', sqlerrm; end;
+  begin
+    perform public.create_online_booking_v3('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+       (v_day + time '16:00') at time zone 'America/Sao_Paulo', 'Outro Nome', '5531933339999', 'Bloqueada@Teste.local', false, null, 'hash-bloq-2');
+    raise exception 'FALHOU: bloqueada agendou com outro número';
+  exception when others then assert sqlerrm = 'CLIENTE_BLOQUEADO', sqlerrm; end;
+  raise notice 'OK ofertas (order bump): preço e duração somados, validação, remarcação com extra e bloqueio de cliente';
+end $$;
+
+-- edição pelo painel mantém os serviços extras
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+do $$
+declare v_id uuid; v_a public.appointments%rowtype; v_day date := (select d from t_ctx) + 5;
+begin
+  select id into v_id from public.appointments where manage_token_hash = 'hash-oferta';
+  perform public.admin_save_appointment('00000000-0000-0000-0000-00000000000a', v_id, '00000000-0000-0000-0000-0000000000c1',
+    (select client_id from public.appointments where id = v_id), null, (v_day + time '14:30') at time zone 'America/Sao_Paulo',
+    'confirmed', null, 'editado', false);
+  select * into v_a from public.appointments where id = v_id;
+  assert v_a.duration_minutes = 90 and v_a.extras is not null and v_a.service_name = 'Serviço Teste + Extra Teste', 'edição perdeu o extra';
+  assert v_a.ends_at = (v_day + time '16:00') at time zone 'America/Sao_Paulo', 'edição calculou o fim sem o extra';
+  raise notice 'OK edição pelo painel mantém serviços extras';
+end $$;
+reset role;
+
 -- Auditoria registrou alterações críticas
 do $$
 begin

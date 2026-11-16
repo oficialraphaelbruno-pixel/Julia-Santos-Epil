@@ -34,7 +34,7 @@ export default async function AgendarPage({
   const { servico, cupom } = await searchParams;
   const business = await getPublicBusiness(slug);
   if (!business) notFound();
-  const { settings, services, categories, professionalName } = await getPublicBookingData(business.id);
+  const { settings, services, categories, professionalName, offers } = await getPublicBookingData(business.id);
 
   if (!settings?.online_enabled) {
     return (
@@ -87,6 +87,7 @@ export default async function AgendarPage({
         initialServiceId={initialServiceId}
         linkCoupon={linkCoupon ? { code: linkCoupon.code, label: linkCoupon.label, serviceNames: couponServices?.map((s) => s.name) ?? null } : null}
         linkCouponUnavailable={Boolean(couponCode && !linkCoupon)}
+        offers={offers}
         siteUrl={SITE_URL}
       />
     </BookingShell>

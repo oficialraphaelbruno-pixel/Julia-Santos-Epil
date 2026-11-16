@@ -69,6 +69,8 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   CUPOM_JA_UTILIZADO: "Você já utilizou este cupom.",
   CUPOM_NAO_APLICAVEL: "Este cupom não vale para o serviço escolhido.",
   CUPOM_VALOR_MINIMO: "O serviço escolhido não atinge o valor mínimo do cupom.",
+  CLIENTE_BLOQUEADO: "Não foi possível concluir o agendamento online. Por favor, fale com o studio pelo WhatsApp.",
+  OFERTA_INDISPONIVEL: "Esta oferta não está mais disponível. Volte e escolha novamente.",
 };
 
 export function friendlyDbError(message: string | undefined | null, fallback = "Não foi possível concluir. Tente novamente.") {

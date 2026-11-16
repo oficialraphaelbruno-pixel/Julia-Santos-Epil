@@ -99,6 +99,31 @@ export interface Client {
   privacy_accepted_at: string | null;
   source: "admin" | "online";
   created_at: string;
+  /** Caminho da foto no bucket privado "client-photos". */
+  photo_path: string | null;
+  blocked_at: string | null;
+  blocked_reason: string | null;
+}
+
+/** Serviço extra adicionado por oferta (order bump). */
+export interface AppointmentExtra {
+  offer_id: string;
+  service_id: string;
+  name: string;
+  price_cents: number;
+  original_price_cents: number;
+  duration_minutes: number;
+}
+
+/** Oferta (order bump) configurada no painel. */
+export interface ServiceOffer {
+  id: string;
+  service_id: string;
+  offer_service_id: string;
+  offer_price_cents: number;
+  headline: string | null;
+  active: boolean;
+  sort_order: number;
 }
 
 export interface Appointment {
@@ -128,6 +153,7 @@ export interface Appointment {
   coupon_code: string | null;
   discount_cents: number;
   original_price_cents: number | null;
+  extras: AppointmentExtra[] | null;
 }
 
 export type DepositStatus = "nao_exigido" | "aguardando" | "pago" | "dispensado" | "devolvido";

@@ -98,11 +98,21 @@ export async function setAppointmentStatusAction(id: string, status: z.infer<typ
 export async function adminSlotsAction(serviceId: string, date: string, excludeId?: string | null): Promise<string[]> {
   const ctx = await assertAdmin();
   if (!z.uuid().safeParse(serviceId).success || !dateKeySchema.safeParse(date).success) return [];
-  const { data } = await ctx.supabase.rpc("get_available_slots", {
+  const exclude = excludeId && z.uuid().safeParse(excludeId).success ? excludeId : null;
+  // Ao editar um agendamento com serviços extras (oferta), os horários consideram a duração total.
+  let extraMinutes = 0;
+  if (exclude) {
+    const { data: appt } = await ctx.supabase.from("appointments").select("service_id, extras").eq("id", exclude).maybeSingle();
+    if (appt?.service_id === serviceId && Array.isArray(appt.extras)) {
+      extraMinutes = (appt.extras as { duration_minutes: number }[]).reduce((t, e) => t + (e.duration_minutes ?? 0), 0);
+    }
+  }
+  const { data } = await ctx.supabase.rpc("get_available_slots_v2", {
     p_business_id: ctx.business.id,
     p_service_id: serviceId,
     p_day: date,
-    p_exclude_appointment_id: excludeId && z.uuid().safeParse(excludeId).success ? excludeId : null,
+    p_extra_minutes: extraMinutes,
+    p_exclude_appointment_id: exclude,
     p_online: false,
   });
   const slots = ((data as { slot_start: string; slot_end: string }[]) ?? []).map((s) => ({
