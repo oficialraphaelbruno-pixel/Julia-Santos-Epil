@@ -50,7 +50,7 @@ export type BookingSettingsInput = z.input<typeof bookingSchema>;
 
 export async function saveBookingSettingsAction(input: BookingSettingsInput): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "agendamento" });
     const p = bookingSchema.safeParse(input);
     if (!p.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(p.error.issues) };
     const v = p.data;
@@ -131,7 +131,7 @@ export type ProfileInput = z.input<typeof profileSchema>;
 
 export async function saveBusinessProfileAction(input: ProfileInput): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "site" });
     const p = profileSchema.safeParse(input);
     if (!p.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(p.error.issues) };
     const v = p.data;
@@ -168,7 +168,7 @@ export async function saveBusinessProfileAction(input: ProfileInput): Promise<Ac
 
 export async function saveBusinessImageAction(field: "logo_url" | "photo_url" | "cover_url", value: string | null): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "site" });
     if (!["logo_url", "photo_url", "cover_url"].includes(field)) return { ok: false, error: "Campo inválido." };
     // Aceita apenas imagens da própria pasta da empresa no Storage ou os arquivos oficiais do projeto.
     const storagePrefix = `${SUPABASE_URL}/storage/v1/object/public/business-assets/${ctx.business.id}/`;
@@ -186,7 +186,7 @@ export async function saveBusinessImageAction(field: "logo_url" | "photo_url" | 
 
 export async function saveLegalTextsAction(input: { privacy: string; terms: string }): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "legal" });
     const p = z.object({ privacy: text(20000), terms: text(20000) }).safeParse(input);
     if (!p.success) return { ok: false, error: "Texto muito longo." };
     const { error } = await ctx.supabase

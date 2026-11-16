@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, Link2 } from "lucide-react";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { PageHeader } from "@/components/admin/page-header";
 import { BookingSettingsForm } from "@/components/admin/booking-settings-form";
 import { BusinessImageField } from "@/components/admin/business-image-field";
@@ -56,18 +58,19 @@ export default async function OnlineBookingPage() {
       </div>
 
       <h2 className="mb-3 font-display text-xl">Regras de agendamento</h2>
-      <BookingSettingsForm settings={s} canEdit={ctx.role === "owner"} />
+      <AreaLockedNotice labels={ctx.canEdit("agendamento") ? [] : [AREA_LABEL.agendamento]} />
+      <BookingSettingsForm settings={s} canEdit={ctx.canEdit("agendamento")} />
 
       <h2 className="mb-3 mt-8 font-display text-xl">Aparência</h2>
       <div className="card-premium grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
-        <BusinessImageField field="logo_url" value={ctx.business.logo_url} label="Logomarca" aspect="aspect-[3/2]" fit="contain" canEdit={ctx.role === "owner"} />
+        <BusinessImageField field="logo_url" value={ctx.business.logo_url} label="Logomarca" aspect="aspect-[3/2]" fit="contain" canEdit={ctx.canEdit("site")} />
         <BusinessImageField
           field="cover_url"
           value={ctx.business.cover_url}
           label="Foto de capa da página de agendamento"
           description="Opcional. Exibida no topo da página de reservas."
           aspect="aspect-[16/9]"
-          canEdit={ctx.role === "owner"}
+          canEdit={ctx.canEdit("site")}
         />
       </div>
       <p className="mt-3 text-[13px] text-muted">

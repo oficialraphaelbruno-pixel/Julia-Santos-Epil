@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/admin/page-header";
 import { CommunicationForm } from "@/components/admin/communication-form";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { requireAdmin } from "@/lib/auth";
 import { emailConfig } from "@/lib/email";
 import { whatsappCloudConfig } from "@/lib/whatsapp-cloud";
@@ -26,8 +28,9 @@ export default async function CommunicationPage() {
   return (
     <>
       <PageHeader title="Comunicação" description="Mensagens automáticas, modelos de texto e histórico de envios." />
+      <AreaLockedNotice labels={ctx.canEdit("comunicacao") ? [] : [AREA_LABEL.comunicacao]} />
       <CommunicationForm
-        canEdit={ctx.role === "owner"}
+        canEdit={ctx.canEdit("comunicacao")}
         emailConfigured={emailConfig().configured}
         whatsappConfigured={whatsappCloudConfig().configured}
         whatsappTested={Boolean(s?.whatsapp_api_tested_at)}

@@ -4,6 +4,8 @@ import { AlertTriangle, ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight,
 import { PageHeader } from "@/components/admin/page-header";
 import { ExpenseList, FinanceActions, IncomeList, type ExpenseRow, type IncomeRow } from "@/components/admin/finance-manager";
 import { Button } from "@/components/ui/button";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { requireAdmin } from "@/lib/auth";
 import { formatDateKey, formatMoney, localToUtcIso, toLocalDateKey, todayKey } from "@/lib/format";
 import { PAYMENT_METHOD_LABEL, type PaymentMethod } from "@/lib/constants";
@@ -58,6 +60,14 @@ function Bars({ items, total, color, label }: { items: { nome: string; total: nu
 export default async function FinancePage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const { mes } = await searchParams;
   const ctx = await requireAdmin({ owner: true });
+  if (!ctx.canEdit("financeiro")) {
+    return (
+      <>
+        <PageHeader title="Financeiro" description="Receitas, despesas e resultado do studio." />
+        <AreaLockedNotice labels={[AREA_LABEL.financeiro]} />
+      </>
+    );
+  }
   const tz = ctx.business.timezone;
   const today = todayKey(tz);
   const month = /^\d{4}-\d{2}$/.test(mes ?? "") ? mes! : today.slice(0, 7);
@@ -95,7 +105,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         actions={
           <>
             <FinanceActions today={today} />
-            <Button asChild size="sm" variant="ghost">
+            <Button asChild size="sm" variant="ghost" className={ctx.canEdit("exportar") ? "" : "hidden"}>
               <Link href={`/admin/exportar/financeiro.csv?mes=${month}`} prefetch={false}>
                 <Download /> CSV do mês
               </Link>

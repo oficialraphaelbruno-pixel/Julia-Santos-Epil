@@ -35,7 +35,7 @@ function refresh() {
 
 export async function saveServiceAction(input: ServiceInput): Promise<ActionResult<{ id: string }>> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "servicos" });
     const parsed = serviceSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(parsed.error.issues) };
     const v = parsed.data;
@@ -94,7 +94,7 @@ export async function saveServiceAction(input: ServiceInput): Promise<ActionResu
 
 export async function setServiceStatusAction(id: string, status: "active" | "inactive" | "archived"): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "servicos" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Serviço inválido." };
     const { error } = await ctx.supabase.from("services").update({ status }).eq("id", id).eq("business_id", ctx.business.id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
@@ -107,7 +107,7 @@ export async function setServiceStatusAction(id: string, status: "active" | "ina
 
 export async function renameCategoryAction(id: string, name: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "servicos" });
     const n = z.string().trim().min(2).max(60).safeParse(name);
     if (!n.success || !z.uuid().safeParse(id).success) return { ok: false, error: "Nome inválido." };
     const { error } = await ctx.supabase.from("service_categories").update({ name: n.data }).eq("id", id);
@@ -121,7 +121,7 @@ export async function renameCategoryAction(id: string, name: string): Promise<Ac
 
 export async function deleteCategoryAction(id: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "servicos" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Categoria inválida." };
     const { error } = await ctx.supabase.from("service_categories").delete().eq("id", id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
@@ -135,7 +135,7 @@ export async function deleteCategoryAction(id: string): Promise<ActionResult> {
 /** Move um serviço uma posição para cima/baixo dentro da mesma categoria (ordem exibida no site). */
 export async function moveServiceAction(id: string, direction: "up" | "down"): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "servicos" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Serviço inválido." };
     const { data: all } = await ctx.supabase
       .from("services")
@@ -167,7 +167,7 @@ export async function moveServiceAction(id: string, direction: "up" | "down"): P
 /** Move uma categoria uma posição para cima/baixo (ordem dos blocos no site). */
 export async function moveCategoryAction(id: string, direction: "up" | "down"): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "servicos" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Categoria inválida." };
     const { data } = await ctx.supabase.from("service_categories").select("id, sort_order, name").eq("business_id", ctx.business.id).order("sort_order").order("name");
     const list = data ?? [];
@@ -203,7 +203,7 @@ export type OfferInput = z.input<typeof offerSchema>;
 
 export async function saveOfferAction(input: OfferInput): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "ofertas" });
     const parsed = offerSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(parsed.error.issues) };
     const v = parsed.data;
@@ -234,7 +234,7 @@ export async function saveOfferAction(input: OfferInput): Promise<ActionResult> 
 
 export async function setOfferActiveAction(id: string, active: boolean): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "ofertas" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Oferta inválida." };
     const { error } = await ctx.supabase.from("service_offers").update({ active }).eq("id", id).eq("business_id", ctx.business.id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
@@ -247,7 +247,7 @@ export async function setOfferActiveAction(id: string, active: boolean): Promise
 
 export async function deleteOfferAction(id: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "ofertas" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Oferta inválida." };
     const { error } = await ctx.supabase.from("service_offers").delete().eq("id", id).eq("business_id", ctx.business.id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };

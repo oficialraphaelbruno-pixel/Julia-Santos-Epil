@@ -10,9 +10,9 @@ const MAX_BYTES = 5 * 1024 * 1024;
 /** Envia uma imagem para o Storage da empresa (pasta = id da empresa). */
 export async function uploadImageAction(formData: FormData): Promise<ActionResult<{ url: string }>> {
   try {
-    const ctx = await assertAdmin({ owner: true });
-    const file = formData.get("file");
     const kind = String(formData.get("kind") ?? "imagem").replace(/[^a-z-]/g, "").slice(0, 20) || "imagem";
+    const ctx = await assertAdmin({ owner: true, area: kind === "servico" ? "servicos" : "site" });
+    const file = formData.get("file");
     if (!(file instanceof File)) return { ok: false, error: "Selecione uma imagem." };
     const ext = ALLOWED[file.type as keyof typeof ALLOWED];
     if (!ext) return { ok: false, error: "Formato não suportado. Use PNG, JPG ou WEBP." };

@@ -20,7 +20,7 @@ function refresh() {
 
 export async function listGoogleCalendarsAction(): Promise<ActionResult<{ id: string; summary: string; primary: boolean }[]>> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "integracoes" });
     return { ok: true, data: await listCalendars(ctx.business.id) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Não foi possível listar as agendas." };
@@ -29,7 +29,7 @@ export async function listGoogleCalendarsAction(): Promise<ActionResult<{ id: st
 
 export async function selectGoogleCalendarAction(id: string, summary: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "integracoes" });
     const v = z.object({ id: z.string().min(1).max(300), summary: z.string().max(300) }).safeParse({ id, summary });
     if (!v.success) return { ok: false, error: "Agenda inválida." };
     const calendars = await listCalendars(ctx.business.id);
@@ -44,7 +44,7 @@ export async function selectGoogleCalendarAction(id: string, summary: string): P
 
 export async function disconnectGoogleAction(): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "integracoes" });
     await disconnect(ctx.business.id);
     refresh();
     return { ok: true, message: "Google Agenda desconectado." };
@@ -56,7 +56,7 @@ export async function disconnectGoogleAction(): Promise<ActionResult> {
 /** Envia ao Google todos os agendamentos futuros confirmados. */
 export async function syncUpcomingAction(): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "integracoes" });
     const db = createServiceClient();
     const { data } = await db
       .from("appointments")
@@ -83,7 +83,7 @@ export async function syncUpcomingAction(): Promise<ActionResult> {
 
 export async function sendTestEmailAction(to: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "integracoes" });
     const email = z.email().safeParse(to.trim());
     if (!email.success) return { ok: false, error: "E-mail inválido." };
     if (!emailConfig().configured) return { ok: false, error: `E-mail não configurado no servidor (faltam: ${emailConfig().missing.join(", ")}).` };
@@ -119,7 +119,7 @@ export async function sendTestEmailAction(to: string): Promise<ActionResult> {
 
 export async function sendTestWhatsappAction(phone: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "integracoes" });
     const n = normalizeBrazilPhone(phone);
     if (!n) return { ok: false, error: "WhatsApp inválido." };
     const c = whatsappCloudConfig();
@@ -162,7 +162,7 @@ export type NotificationSettingsInput = z.input<typeof settingsSchema>;
 
 export async function saveNotificationSettingsAction(input: NotificationSettingsInput): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "comunicacao" });
     const p = settingsSchema.safeParse(input);
     if (!p.success) return { ok: false, error: p.error.issues[0].message };
     const v = p.data;

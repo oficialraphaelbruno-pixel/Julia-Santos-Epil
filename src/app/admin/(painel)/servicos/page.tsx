@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { PageHeader } from "@/components/admin/page-header";
 import { ServicesManager } from "@/components/admin/services-manager";
 import { OffersManager } from "@/components/admin/offers-manager";
@@ -9,7 +11,8 @@ export const metadata: Metadata = { title: "Serviços" };
 
 export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ novo?: string }> }) {
   const { novo } = await searchParams;
-  const { supabase, business, role } = await requireAdmin();
+  const ctx = await requireAdmin();
+  const { supabase, business, role } = ctx;
   const [services, categories, professionals, combos, offers] = await Promise.all([
     supabase.from("services").select("*").eq("business_id", business.id).order("sort_order").order("name"),
     supabase.from("service_categories").select("id, name, sort_order").eq("business_id", business.id).order("sort_order").order("name"),
@@ -29,6 +32,9 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
       {role !== "owner" ? (
         <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Somente a proprietária pode alterar serviços.</p>
       ) : null}
+      <AreaLockedNotice
+        labels={[...(ctx.canEdit("servicos") ? [] : [AREA_LABEL.servicos]), ...(ctx.canEdit("ofertas") ? [] : [AREA_LABEL.ofertas])]}
+      />
       <ServicesManager
         services={(services.data ?? []) as Service[]}
         categories={(categories.data ?? []) as Category[]}
@@ -39,7 +45,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
       <OffersManager
         offers={(offers.data ?? []) as ServiceOffer[]}
         services={((services.data ?? []) as Service[]).filter((s) => s.status !== "archived")}
-        canEdit={role === "owner"}
+        canEdit={ctx.canEdit("ofertas")}
       />
     </>
   );

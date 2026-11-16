@@ -42,7 +42,7 @@ export type ExpenseInput = z.input<typeof expenseSchema>;
 
 export async function saveExpenseAction(input: ExpenseInput): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "financeiro" });
     const p = expenseSchema.safeParse(input);
     if (!p.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(p.error.issues) };
     const v = p.data;
@@ -87,7 +87,7 @@ export async function saveExpenseAction(input: ExpenseInput): Promise<ActionResu
 
 export async function setExpensePaidAction(id: string, paid: boolean, paidAt?: string, method?: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "financeiro" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Despesa inválida." };
     const date = paidAt && dateKey.safeParse(paidAt).success ? paidAt : new Date().toISOString().slice(0, 10);
     const m = method && methodEnum.safeParse(method).success ? method : undefined;
@@ -106,7 +106,7 @@ export async function setExpensePaidAction(id: string, paid: boolean, paidAt?: s
 
 export async function deleteExpenseAction(id: string, wholeSeries = false): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "financeiro" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Despesa inválida." };
     const { data: e } = await ctx.supabase.from("expenses").select("id, recurrence_group, due_date, receipt_path").eq("id", id).maybeSingle();
     if (!e) return { ok: false, error: "Despesa não encontrada." };
@@ -127,7 +127,7 @@ const RECEIPT_TYPES = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "
 /** Envia comprovante para o armazenamento PRIVADO da empresa. */
 export async function uploadReceiptAction(formData: FormData): Promise<ActionResult<{ path: string }>> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "financeiro" });
     const file = formData.get("file");
     if (!(file instanceof File)) return { ok: false, error: "Selecione um arquivo." };
     const ext = RECEIPT_TYPES[file.type as keyof typeof RECEIPT_TYPES];
@@ -145,7 +145,7 @@ export async function uploadReceiptAction(formData: FormData): Promise<ActionRes
 /** Link temporário (5 minutos) para ver um comprovante. */
 export async function receiptUrlAction(path: string): Promise<ActionResult<{ url: string }>> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "financeiro" });
     if (!path.startsWith(`${ctx.business.id}/`)) return { ok: false, error: "Comprovante inválido." };
     const { data, error } = await ctx.supabase.storage.from("receipts").createSignedUrl(path, 300);
     if (error || !data) return { ok: false, error: "Comprovante não encontrado." };
@@ -165,7 +165,7 @@ const incomeSchema = z.object({
 /** Receita avulsa (ex.: venda de produto, gift card). */
 export async function saveIncomeAction(input: z.input<typeof incomeSchema>): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "financeiro" });
     const p = incomeSchema.safeParse(input);
     if (!p.success) return { ok: false, error: p.error.issues[0].message };
     const v = p.data;
@@ -189,7 +189,7 @@ export async function saveIncomeAction(input: z.input<typeof incomeSchema>): Pro
 
 export async function deleteIncomeAction(id: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "financeiro" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Lançamento inválido." };
     const { error } = await ctx.supabase.from("payments").delete().eq("id", id).eq("business_id", ctx.business.id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };

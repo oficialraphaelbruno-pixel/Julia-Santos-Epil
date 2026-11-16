@@ -7,7 +7,8 @@ import { SITE_URL } from "@/lib/env";
 /** Inicia o OAuth 2.0 do Google (somente proprietária). */
 export async function GET() {
   const ctx = await getAdminContext();
-  if (!ctx || ctx.role !== "owner") return NextResponse.redirect(`${SITE_URL}/admin/login`);
+  if (!ctx || (ctx.role !== "owner" && !ctx.isPlatformAdmin)) return NextResponse.redirect(`${SITE_URL}/admin/login`);
+  if (!ctx.canEdit("integracoes")) return NextResponse.redirect(`${SITE_URL}/admin/integracoes?google=bloqueado`);
   if (!googleConfig().configured) return NextResponse.redirect(`${SITE_URL}/admin/integracoes?google=nao-configurado`);
   const state = randomBytes(24).toString("base64url");
   const res = NextResponse.redirect(buildAuthUrl(state));

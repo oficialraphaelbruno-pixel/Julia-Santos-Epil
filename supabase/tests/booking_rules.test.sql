@@ -339,6 +339,44 @@ begin
 end $$;
 reset role;
 
+-- ---------- Permissões por área e administrador geral ----------
+select set_config('request.jwt.claims', '', true);
+update public.business_members set permissions = '{"servicos": false, "legal": false}'
+ where user_id = '00000000-0000-0000-0000-0000000000a1';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+do $$
+begin
+  assert not public.can_edit('00000000-0000-0000-0000-00000000000a', 'servicos'), 'área bloqueada aparece liberada';
+  assert public.can_edit('00000000-0000-0000-0000-00000000000a', 'cupons'), 'área sem regra deveria estar liberada';
+  begin
+    update public.services set price_cents = 1 where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FALHOU: editou serviço com a área bloqueada';
+  exception when others then assert sqlerrm = 'AREA_BLOQUEADA', sqlerrm; end;
+  begin
+    update public.businesses set privacy_policy = 'x' where id = '00000000-0000-0000-0000-00000000000a';
+    raise exception 'FALHOU: editou texto legal bloqueado';
+  exception when others then assert sqlerrm = 'AREA_BLOQUEADA', sqlerrm; end;
+  update public.businesses set hero_title = 'Título liberado' where id = '00000000-0000-0000-0000-00000000000a';
+  begin
+    update public.business_members set permissions = '{}' where user_id = '00000000-0000-0000-0000-0000000000a1';
+    raise exception 'FALHOU: proprietária alterou as próprias permissões';
+  exception when others then assert sqlerrm = 'SEM_PERMISSAO', sqlerrm; end;
+  raise notice 'OK permissões: área bloqueada recusada no banco, área livre aceita, proprietária não altera permissões';
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.profiles set is_platform_admin = true where id = '00000000-0000-0000-0000-0000000000a1';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+do $$
+begin
+  update public.services set price_cents = 8100 where id = '00000000-0000-0000-0000-0000000000c1';
+  update public.business_members set permissions = '{}' where user_id = '00000000-0000-0000-0000-0000000000a1';
+  raise notice 'OK administrador geral edita qualquer área e gerencia permissões';
+end $$;
+reset role;
+
 -- Auditoria registrou alterações críticas
 do $$
 begin

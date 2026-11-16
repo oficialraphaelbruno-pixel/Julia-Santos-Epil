@@ -5,6 +5,8 @@ import { GoogleIntegrationControls } from "@/components/admin/google-integration
 import { TestSender } from "@/components/admin/test-sender";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { requireAdmin } from "@/lib/auth";
 import { getConnectionStatus, googleConfig } from "@/lib/google-calendar";
 import { emailConfig } from "@/lib/email";
@@ -22,6 +24,7 @@ const GOOGLE_MSG: Record<string, [string, boolean]> = {
   "sem-token": ["O Google não enviou permissão de acesso contínuo. Remova o acesso em myaccount.google.com/permissions e conecte novamente.", false],
   erro: ["Não foi possível concluir a conexão com o Google.", false],
   "nao-configurado": ["As credenciais do Google ainda não foram configuradas no servidor.", false],
+  bloqueado: ["A área de Integrações foi bloqueada pelo administrador do painel.", false],
 };
 
 function Status({ state, text }: { state: "ok" | "warn" | "off"; text: string }) {
@@ -54,6 +57,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   return (
     <>
       <PageHeader title="Integrações" description="Conexões reais com serviços externos. Nada aqui é simulado." />
+      <AreaLockedNotice labels={ctx.canEdit("integracoes") ? [] : [AREA_LABEL.integracoes]} />
       {msg ? (
         <p className={`mb-5 rounded-2xl px-4 py-3 text-sm ${msg[1] ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>{msg[0]}</p>
       ) : null}

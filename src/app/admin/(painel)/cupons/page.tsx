@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { PageHeader } from "@/components/admin/page-header";
 import { CouponsManager, type CouponRow } from "@/components/admin/coupons-manager";
 import { requireAdmin } from "@/lib/auth";
@@ -29,7 +31,8 @@ export default async function CouponsPage() {
         title="Cupons de desconto"
         description="Crie cupons com nome personalizado, limite de usos e validade. As clientes aplicam o cupom no agendamento online ou recebem o link do cupom, que já abre o agendamento com o desconto."
       />
-      <CouponsManager coupons={rows} services={(services ?? []) as { id: string; name: string }[]} today={todayKey(ctx.business.timezone)} canEdit={ctx.role === "owner"} siteUrl={SITE_URL} />
+      <AreaLockedNotice labels={ctx.canEdit("cupons") ? [] : [AREA_LABEL.cupons]} />
+      <CouponsManager coupons={rows} services={(services ?? []) as { id: string; name: string }[]} today={todayKey(ctx.business.timezone)} canEdit={ctx.canEdit("cupons")} siteUrl={SITE_URL} />
     </>
   );
 }

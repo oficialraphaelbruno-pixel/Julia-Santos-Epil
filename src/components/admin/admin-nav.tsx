@@ -15,6 +15,7 @@ import {
   Plug,
   Plus,
   Settings,
+  ShieldCheck,
   Sparkles,
   Users,
   X,
@@ -24,26 +25,58 @@ import { logoutAction } from "@/app/admin/auth-actions";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/admin/theme-toggle";
 
-export const NAV_ITEMS = [
+interface NavItem {
+  href: string;
+  label: string;
+  short: string;
+  icon: typeof Users;
+  /** Só aparece para o administrador geral. */
+  platformOnly?: boolean;
+  /** Some do menu quando a área estiver bloqueada. */
+  hideWhenLocked?: string;
+}
+
+export const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Painel de Controle", short: "Painel", icon: LayoutDashboard },
   { href: "/admin/agenda", label: "Agenda", short: "Agenda", icon: CalendarDays },
   { href: "/admin/clientes", label: "Clientes", short: "Clientes", icon: Users },
   { href: "/admin/servicos", label: "Serviços", short: "Serviços", icon: Sparkles },
-  { href: "/admin/financeiro", label: "Financeiro", short: "Financeiro", icon: Landmark },
+  { href: "/admin/financeiro", label: "Financeiro", short: "Financeiro", icon: Landmark, hideWhenLocked: "financeiro" },
   { href: "/admin/cupons", label: "Cupons", short: "Cupons", icon: TicketPercent },
   { href: "/admin/horarios", label: "Horários e bloqueios", short: "Horários", icon: Clock },
   { href: "/admin/agendamento-online", label: "Agendamento Online", short: "Online", icon: Globe },
   { href: "/admin/comunicacao", label: "Comunicação", short: "Mensagens", icon: MessagesSquare },
   { href: "/admin/integracoes", label: "Integrações", short: "Integrações", icon: Plug },
   { href: "/admin/configuracoes", label: "Configurações", short: "Config.", icon: Settings },
+  { href: "/admin/usuarios", label: "Usuários e permissões", short: "Usuários", icon: ShieldCheck, platformOnly: true },
 ];
+
+/** Itens visíveis para a usuária atual. */
+export function visibleNav(isPlatformAdmin: boolean, lockedAreas: string[]) {
+  return NAV_ITEMS.filter((i) => (!i.platformOnly || isPlatformAdmin) && !(i.hideWhenLocked && lockedAreas.includes(i.hideWhenLocked)));
+}
 
 function isActive(path: string, href: string) {
   return href === "/admin" ? path === "/admin" : path === href || path.startsWith(href + "/");
 }
 
-export function AdminSidebar({ logo, businessName, email, dark }: { logo: string | null; businessName: string; email: string; dark: boolean }) {
+export function AdminSidebar({
+  logo,
+  businessName,
+  email,
+  dark,
+  isPlatformAdmin = false,
+  lockedAreas = [],
+}: {
+  logo: string | null;
+  businessName: string;
+  email: string;
+  dark: boolean;
+  isPlatformAdmin?: boolean;
+  lockedAreas?: string[];
+}) {
   const path = usePathname();
+  const items = visibleNav(isPlatformAdmin, lockedAreas);
   return (
     <aside className="sticky top-0 hidden h-dvh w-68 shrink-0 flex-col border-r border-line/80 bg-white lg:flex">
       <div className="flex items-start justify-between gap-2 pb-4 pl-6 pr-4 pt-7">
@@ -53,7 +86,7 @@ export function AdminSidebar({ logo, businessName, email, dark }: { logo: string
         <ThemeToggle initialDark={dark} compact />
       </div>
       <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Painel administrativo">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const active = isActive(path, item.href);
           return (
             <Link
@@ -85,8 +118,21 @@ export function AdminSidebar({ logo, businessName, email, dark }: { logo: string
   );
 }
 
-export function AdminMobileNav({ logo, businessName, dark }: { logo: string | null; businessName: string; dark: boolean }) {
+export function AdminMobileNav({
+  logo,
+  businessName,
+  dark,
+  isPlatformAdmin = false,
+  lockedAreas = [],
+}: {
+  logo: string | null;
+  businessName: string;
+  dark: boolean;
+  isPlatformAdmin?: boolean;
+  lockedAreas?: string[];
+}) {
   const path = usePathname();
+  const items = visibleNav(isPlatformAdmin, lockedAreas);
   const [open, setOpen] = useState(false);
   const bottom = [NAV_ITEMS[0], NAV_ITEMS[1], null, NAV_ITEMS[2]];
 
@@ -140,7 +186,7 @@ export function AdminMobileNav({ logo, businessName, dark }: { logo: string | nu
               </button>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {NAV_ITEMS.map((item) => (
+              {items.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

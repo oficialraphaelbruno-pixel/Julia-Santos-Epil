@@ -76,3 +76,10 @@
 - **Bloquear cliente**: ficha → Bloquear (motivo interno opcional). A cliente bloqueada não agenda pelo site — nem com outro número, se usar o mesmo e-mail — e vê só "fale com o studio pelo WhatsApp". Etiqueta "Bloqueada" na lista, filtro "Bloqueadas", aviso no agendamento e na busca de clientes. Desbloquear a qualquer momento.
 - **Ofertas (order bump)**: Serviços → "Ofertas no agendamento". Ex.: quem agenda Nariz vê "adicione Buço por R$ 15 (de R$ 25)". O extra é feito no mesmo horário: os horários livres já consideram a duração total; valor, sinal e duração somam; o agendamento fica como "Nariz + Buço". Remarcação e edição pelo painel mantêm a duração completa.
 - **Aniversários**: card "Aniversariantes da semana" no Painel de Controle com botão "Parabéns pelo WhatsApp"; filtro "Aniversariantes do mês" e etiqueta 🎂 na lista; idade e contagem regressiva na ficha. A data é preenchida em Editar cliente.
+
+## ✅ Administrador geral e permissões (17/11/2026)
+- O login do Raphael é o **administrador geral** (`profiles.is_platform_admin`): acesso total e a tela **Usuários e permissões** (só ele vê).
+- Nessa tela: criar novos logins, alterar a senha de qualquer usuário do painel e liberar/bloquear, por pessoa, 11 áreas: site, serviços e preços, ofertas, cupons, horários de funcionamento, regras do agendamento online, textos legais, integrações, comunicação, financeiro e exportação.
+- O bloqueio vale no banco de dados (não só na tela). Área bloqueada mostra aviso "Edição bloqueada pelo administrador do painel"; Financeiro some do menu.
+- Sempre liberado: agenda, clientes, confirmação de sinal, bloqueio de horário, pedidos LGPD das clientes e a própria senha.
+- Só o administrador geral altera a lista de usuários (antes qualquer proprietária podia).

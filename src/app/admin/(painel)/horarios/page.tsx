@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { PageHeader } from "@/components/admin/page-header";
 import { HoursEditor } from "@/components/admin/hours-editor";
 import { BlocksManager, SpecialDaysManager, type BlockRow, type SpecialRow } from "@/components/admin/blocks-manager";
@@ -38,15 +40,16 @@ export default async function HoursPage({ searchParams }: { searchParams: Promis
         title="Horários de funcionamento"
         description={`Defina os dias, horários e intervalo de almoço de ${prof.display_name}. A agenda online usa estas regras.`}
       />
+      <AreaLockedNotice labels={ctx.canEdit("horarios") ? [] : [AREA_LABEL.horarios]} />
       {!hasOpenDay ? (
         <p className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Nenhum dia está aberto ainda. Enquanto isso, o agendamento online não exibirá horários.
         </p>
       ) : null}
-      <HoursEditor professionalId={prof.id} hours={(hours.data ?? []) as WorkingHour[]} canEdit={ctx.role === "owner"} />
+      <HoursEditor professionalId={prof.id} hours={(hours.data ?? []) as WorkingHour[]} canEdit={ctx.canEdit("horarios")} />
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <BlocksManager blocks={(blocks.data ?? []) as BlockRow[]} tz={ctx.business.timezone} today={today} openNew={sp.bloquear === "1"} />
-        <SpecialDaysManager professionalId={prof.id} days={(specials.data ?? []) as SpecialRow[]} today={today} canEdit={ctx.role === "owner"} />
+        <SpecialDaysManager professionalId={prof.id} days={(specials.data ?? []) as SpecialRow[]} today={today} canEdit={ctx.canEdit("horarios")} />
       </div>
     </>
   );

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarSync, Download, Mail, ShieldCheck, Users } from "lucide-react";
+import { AreaLockedNotice } from "@/components/admin/area-locked-notice";
+import { AREA_LABEL } from "@/lib/permissions";
 import { PageHeader } from "@/components/admin/page-header";
 import { ProfileForm } from "@/components/admin/profile-form";
 import { BusinessImageField } from "@/components/admin/business-image-field";
@@ -41,20 +43,21 @@ export default async function SettingsPage() {
       </nav>
 
       <section id="dados" className="scroll-mt-20">
-        <ProfileForm business={ctx.business} canEdit={isOwner} />
+        <AreaLockedNotice labels={[...(ctx.canEdit("site") ? [] : [AREA_LABEL.site]), ...(ctx.canEdit("legal") ? [] : [AREA_LABEL.legal])]} />
+        <ProfileForm business={ctx.business} canEdit={ctx.canEdit("site")} />
       </section>
 
       <section id="imagens" className="mt-8 scroll-mt-20">
         <h2 className="mb-3 font-display text-xl">Logomarca e fotografias</h2>
         <div className="card-premium grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
-          <BusinessImageField field="logo_url" value={ctx.business.logo_url} label="Logomarca" aspect="aspect-[3/2]" fit="contain" canEdit={isOwner} />
+          <BusinessImageField field="logo_url" value={ctx.business.logo_url} label="Logomarca" aspect="aspect-[3/2]" fit="contain" canEdit={ctx.canEdit("site")} />
           <BusinessImageField
             field="photo_url"
             value={ctx.business.photo_url}
             label="Fotografia principal"
             description="Destaque na página inicial e na seção Sobre."
             aspect="aspect-[3/4]"
-            canEdit={isOwner}
+            canEdit={ctx.canEdit("site")}
           />
         </div>
         <p className="mt-2 text-[12px] text-muted">As imagens são exibidas sem distorção, preservando a proporção original.</p>
@@ -92,7 +95,17 @@ export default async function SettingsPage() {
             ))}
           </ul>
           <p className="mt-3 text-[12.5px] text-muted">
-            Novos acessos são criados pelo procedimento seguro descrito no Guia de Administração (não há cadastro público). Convites pelo painel chegam na Fase 3.
+            {ctx.isPlatformAdmin ? (
+              <>
+                Crie logins, troque senhas e defina permissões em{" "}
+                <Link href="/admin/usuarios" className="text-gold-dark underline">
+                  Usuários e permissões
+                </Link>
+                .
+              </>
+            ) : (
+              "Novos acessos e senhas são gerenciados pelo administrador geral do painel."
+            )}
           </p>
         </div>
       </section>
@@ -104,7 +117,7 @@ export default async function SettingsPage() {
           terms={ctx.business.terms_of_use ?? ""}
           defaultPrivacy={defaultPrivacyPolicy(ctx.business.name)}
           defaultTerms={defaultTerms(ctx.business.name)}
-          canEdit={isOwner}
+          canEdit={ctx.canEdit("legal")}
         />
       </section>
 
@@ -121,7 +134,8 @@ export default async function SettingsPage() {
 
       <section id="exportacao" className="mt-8 scroll-mt-20">
         <h2 className="mb-3 font-display text-xl">Exportação de dados</h2>
-        <div className="card-premium flex flex-wrap gap-2 p-5 sm:p-6">
+        {!ctx.canEdit("exportar") ? <AreaLockedNotice labels={[AREA_LABEL.exportar]} /> : null}
+        <div className={`card-premium flex-wrap gap-2 p-5 sm:p-6 ${ctx.canEdit("exportar") ? "flex" : "hidden"}`}>
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/exportar/clientes.csv" prefetch={false}>
               <Download /> Clientes (CSV)

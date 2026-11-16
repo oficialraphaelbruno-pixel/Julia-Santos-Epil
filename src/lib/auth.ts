@@ -3,6 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Business, MemberRole } from "@/lib/types";
+import { isAllowed, type Area, type Permissions } from "@/lib/permissions";
 
 export interface AdminContext {
   userId: string;
@@ -10,6 +11,10 @@ export interface AdminContext {
   role: MemberRole;
   business: Business;
   supabase: Awaited<ReturnType<typeof createClient>>;
+  /** Administrador geral: acesso total e gestão de usuários e permissões. */
+  isPlatformAdmin: boolean;
+  permissions: Permissions;
+  canEdit: (area: Area) => boolean;
 }
 
 /**
@@ -24,19 +29,26 @@ export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
 
   const { data: membership } = await supabase
     .from("business_members")
-    .select("role, business:businesses(*)")
+    .select("role, permissions, business:businesses(*)")
     .eq("user_id", userData.user.id)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 
   if (!membership?.business) return null;
+  const { data: profile } = await supabase.from("profiles").select("is_platform_admin").eq("id", userData.user.id).maybeSingle();
+  const isPlatformAdmin = Boolean(profile?.is_platform_admin);
+  const role = membership.role as MemberRole;
+  const permissions = (membership.permissions ?? {}) as Permissions;
   return {
     userId: userData.user.id,
     email: userData.user.email ?? "",
-    role: membership.role as MemberRole,
+    role,
     business: membership.business as unknown as Business,
     supabase,
+    isPlatformAdmin,
+    permissions,
+    canEdit: (area: Area) => isPlatformAdmin || (role === "owner" && isAllowed(permissions, area)),
   };
 });
 
@@ -47,19 +59,24 @@ async function mfaPending(supabase: Awaited<ReturnType<typeof createClient>>) {
 }
 
 /** Para páginas: redireciona ao login quando não autorizada. */
-export async function requireAdmin(opts: { owner?: boolean } = {}): Promise<AdminContext> {
+export async function requireAdmin(opts: { owner?: boolean; platformAdmin?: boolean } = {}): Promise<AdminContext> {
   const supabase = await createClient();
   if (await mfaPending(supabase)) redirect("/admin/verificacao");
   const ctx = await getAdminContext();
   if (!ctx) redirect("/admin/login?erro=acesso");
-  if (opts.owner && ctx.role !== "owner") redirect("/admin?erro=permissao");
+  if (opts.owner && ctx.role !== "owner" && !ctx.isPlatformAdmin) redirect("/admin?erro=permissao");
+  if (opts.platformAdmin && !ctx.isPlatformAdmin) redirect("/admin?erro=permissao");
   return ctx;
 }
 
 /** Para Server Actions: lança erro em vez de redirecionar. */
-export async function assertAdmin(opts: { owner?: boolean } = {}): Promise<AdminContext> {
+export async function assertAdmin(opts: { owner?: boolean; area?: Area; platformAdmin?: boolean } = {}): Promise<AdminContext> {
   const ctx = await getAdminContext();
   if (!ctx) throw new Error("Sessão expirada. Entre novamente.");
-  if (opts.owner && ctx.role !== "owner") throw new Error("Apenas a proprietária pode alterar esta configuração.");
+  if (opts.platformAdmin && !ctx.isPlatformAdmin) throw new Error("Apenas o administrador geral pode fazer isso.");
+  if (opts.owner && ctx.role !== "owner" && !ctx.isPlatformAdmin) throw new Error("Apenas a proprietária pode alterar esta configuração.");
+  if (opts.area && !ctx.canEdit(opts.area)) throw new Error(AREA_LOCKED_MESSAGE);
   return ctx;
 }
+
+export const AREA_LOCKED_MESSAGE = "Esta área foi bloqueada pelo administrador do painel.";

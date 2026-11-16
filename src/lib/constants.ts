@@ -71,6 +71,7 @@ export const DB_ERROR_MESSAGES: Record<string, string> = {
   CUPOM_VALOR_MINIMO: "O serviço escolhido não atinge o valor mínimo do cupom.",
   CLIENTE_BLOQUEADO: "Não foi possível concluir o agendamento online. Por favor, fale com o studio pelo WhatsApp.",
   OFERTA_INDISPONIVEL: "Esta oferta não está mais disponível. Volte e escolha novamente.",
+  AREA_BLOQUEADA: "Esta área foi bloqueada pelo administrador do painel.",
 };
 
 export function friendlyDbError(message: string | undefined | null, fallback = "Não foi possível concluir. Tente novamente.") {

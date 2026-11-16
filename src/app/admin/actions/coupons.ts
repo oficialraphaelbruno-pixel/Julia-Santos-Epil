@@ -35,7 +35,7 @@ export type CouponInput = z.input<typeof couponSchema>;
 
 export async function saveCouponAction(input: CouponInput): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "cupons" });
     const p = couponSchema.safeParse(input);
     if (!p.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(p.error.issues) };
     const v = p.data;
@@ -77,7 +77,7 @@ export async function saveCouponAction(input: CouponInput): Promise<ActionResult
 
 export async function setCouponActiveAction(id: string, active: boolean): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "cupons" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Cupom inválido." };
     const { error } = await ctx.supabase.from("coupons").update({ active }).eq("id", id).eq("business_id", ctx.business.id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
@@ -90,7 +90,7 @@ export async function setCouponActiveAction(id: string, active: boolean): Promis
 
 export async function deleteCouponAction(id: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "cupons" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Cupom inválido." };
     const { count } = await ctx.supabase.from("appointments").select("id", { count: "exact", head: true }).eq("coupon_id", id);
     if (count) return { ok: false, error: "Este cupom já foi usado em agendamentos. Desative-o em vez de excluir (o histórico é mantido)." };

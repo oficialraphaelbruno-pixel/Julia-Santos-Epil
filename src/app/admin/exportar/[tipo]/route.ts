@@ -17,6 +17,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
   const ctx = await getAdminContext();
   if (!ctx) return new NextResponse("Não autorizado", { status: 401 });
   const { tipo } = await params;
+  if (!ctx.canEdit("exportar") || (tipo === "financeiro.csv" && !ctx.canEdit("financeiro"))) {
+    return new NextResponse("Esta área foi bloqueada pelo administrador do painel.", { status: 403 });
+  }
   const tz = ctx.business.timezone;
   let body: string;
 

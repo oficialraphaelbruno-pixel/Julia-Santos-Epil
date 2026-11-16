@@ -40,7 +40,7 @@ function refresh() {
 
 export async function saveWorkingHoursAction(professionalId: string, days: unknown): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "horarios" });
     if (!z.uuid().safeParse(professionalId).success) return { ok: false, error: "Profissional inválida." };
     const parsed = z.array(daySchema).length(7).safeParse(days);
     if (!parsed.success) {
@@ -146,7 +146,7 @@ const specialSchema = z
 
 export async function saveSpecialDayAction(input: unknown): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "horarios" });
     const parsed = specialSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
     const d = parsed.data;
@@ -174,7 +174,7 @@ export async function saveSpecialDayAction(input: unknown): Promise<ActionResult
 
 export async function deleteSpecialDayAction(id: string): Promise<ActionResult> {
   try {
-    const ctx = await assertAdmin({ owner: true });
+    const ctx = await assertAdmin({ owner: true, area: "horarios" });
     if (!z.uuid().safeParse(id).success) return { ok: false, error: "Registro inválido." };
     const { error } = await ctx.supabase.from("special_days").delete().eq("id", id).eq("business_id", ctx.business.id);
     if (error) return { ok: false, error: friendlyDbError(error.message) };
