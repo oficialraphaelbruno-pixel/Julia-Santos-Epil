@@ -154,6 +154,8 @@ export interface Appointment {
   discount_cents: number;
   original_price_cents: number | null;
   extras: AppointmentExtra[] | null;
+  referral_discount_cents?: number;
+  referral_reward_id?: string | null;
 }
 
 export type DepositStatus = "nao_exigido" | "aguardando" | "pago" | "dispensado" | "devolvido";

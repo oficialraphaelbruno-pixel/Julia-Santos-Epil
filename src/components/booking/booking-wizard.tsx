@@ -32,6 +32,8 @@ import {
   getAvailableDaysAction,
   getAvailableSlotsAction,
   previewCouponAction,
+  previewReferralAction,
+  type ReferralPreview,
   type BookingCreated,
   type CouponPreview,
   type Slot,
@@ -42,7 +44,7 @@ import { googleCalendarTemplateLink } from "@/lib/ics";
 import { eventLocation } from "@/lib/address";
 import { whatsappLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
-import type { PublicBusiness, PublicOffer, PublicService, PublicSettings } from "@/lib/public-data";
+import type { PublicBusiness, PublicOffer, PublicService, PublicSettings, ReferralInfo } from "@/lib/public-data";
 import type { Category } from "@/lib/types";
 
 const STEPS = ["Serviço", "Data", "Horário", "Seus dados", "Revisão"];
@@ -62,6 +64,9 @@ interface Props {
   linkCouponUnavailable?: boolean;
   /** Ofertas (order bump) configuradas no painel. */
   offers?: PublicOffer[];
+  /** Indicação recebida por link (?indicacao=CODIGO). */
+  referral?: ReferralInfo | null;
+  referralUnavailable?: boolean;
 }
 
 export function BookingWizard(props: Props) {
@@ -92,7 +97,10 @@ export function BookingWizard(props: Props) {
   const serviceOffers = useMemo(() => (props.offers ?? []).filter((o) => o.serviceId === service?.id), [props.offers, service?.id]);
   const chosenOffers = serviceOffers.filter((o) => offerIds.includes(o.id));
   const extrasPrice = chosenOffers.reduce((t, o) => t + o.priceCents, 0);
-  const finalPrice = (coupon ? coupon.finalCents : (service?.price_cents ?? 0)) + extrasPrice;
+  const [refPreview, setRefPreview] = useState<ReferralPreview | null>(null);
+  // Desconto de indicação não acumula com cupom
+  const referralDiscount = !coupon && refPreview ? refPreview.discountCents : 0;
+  const finalPrice = (coupon ? coupon.finalCents : (service?.price_cents ?? 0)) + extrasPrice - referralDiscount;
   const depositPreview = Math.round((finalPrice * settings.deposit_percent) / 100);
 
   const form = useForm<ClientDetailsInput>({
@@ -143,6 +151,7 @@ export function BookingWizard(props: Props) {
         client: { ...form.getValues(), privacy: privacyOk, terms: termsOk },
         couponCode: coupon?.code,
         offerIds,
+        referralCode: props.referral?.code ?? null,
       });
       if (res.ok && res.data) {
         setResult(res.data);
@@ -206,7 +215,16 @@ export function BookingWizard(props: Props) {
               {result.reference}
             </span>
           </div>
-          <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} extras={chosenOffers} />
+          <Summary
+            service={service}
+            slot={slot}
+            tz={tz}
+            professionalName={professionalName}
+            coupon={coupon}
+            extras={chosenOffers}
+            referralDiscount={result.referralDiscountCents}
+            referralLabel="Desconto por indicação"
+          />
         </div>
 
         {result.deposit ? (
@@ -249,6 +267,31 @@ export function BookingWizard(props: Props) {
             </a>
           </Button>
         ) : null}
+        {result.referral ? (
+          <div className="mt-6 rounded-3xl border-2 border-dashed border-champagne bg-white p-6 text-left shadow-soft" data-testid="referral-card">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-dark">
+              <Gift className="size-4" /> Indique uma amiga
+            </p>
+            <p className="mt-2 text-[15px] text-ink">
+              Quando uma amiga agendar pelo seu link e comparecer, você ganha <b>{result.referral.rewardLabel}</b> no seu próximo agendamento.
+            </p>
+            <p className="mt-3 break-all rounded-xl bg-ivory p-3 font-mono text-[12.5px] text-gold-deep" data-testid="referral-link">
+              {result.referral.link}
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <CopyButton value={result.referral.link} label="Copiar meu link" variant="outline" />
+              <Button asChild variant="whatsapp">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Amiga, agenda com a ${business.name}! Usa o meu link: ${result.referral.link} ✨`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <WhatsAppIcon /> Enviar no WhatsApp
+                </a>
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <Link href="/" className="mt-8 inline-block text-sm text-gold-dark underline-offset-4 hover:underline">
           Voltar ao site
         </Link>
@@ -268,6 +311,22 @@ export function BookingWizard(props: Props) {
             Cupom <b className="font-mono text-gold-deep">{linkCoupon.code}</b> ativado: {linkCoupon.label}
             {linkCoupon.serviceNames?.length ? ` em ${linkCoupon.serviceNames.join(", ")}` : ""}. O desconto aparece na revisão do agendamento.
           </p>
+        </div>
+      ) : null}
+      {props.referral ? (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-champagne/70 bg-white px-4 py-3 text-sm text-ink/80 shadow-soft" data-testid="referral-banner">
+          <Gift className="mt-0.5 size-5 shrink-0 text-gold" />
+          <p>
+            Você foi indicada por <b className="text-gold-deep">{props.referral.referrerFirstName}</b>! ✨
+            {props.referral.friendLabel
+              ? ` Ganhe ${props.referral.friendLabel} no seu primeiro agendamento (não acumula com cupom).`
+              : " Que bom ter você por aqui."}
+          </p>
+        </div>
+      ) : null}
+      {props.referralUnavailable ? (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-testid="referral-unavailable">
+          Este link de indicação não está mais ativo, mas você pode agendar normalmente.
         </div>
       ) : null}
       {props.linkCouponUnavailable ? (
@@ -449,6 +508,8 @@ export function BookingWizard(props: Props) {
             onSubmit={form.handleSubmit(async (values) => {
               setNotice(null);
               setStep(4);
+              setRefPreview(null);
+              void previewReferralAction(business.slug, service.id, values.phone, values.email ?? "", props.referral?.code).then(setRefPreview);
               if (linkCoupon && linkCouponPending && !coupon) {
                 setLinkCouponPending(false);
                 setApplyingCoupon(true);
@@ -503,7 +564,25 @@ export function BookingWizard(props: Props) {
         <section className="animate-fade-up">
           <StepTitle icon={<Check />} title="Revise seu agendamento" />
           <div className="rounded-3xl border border-line bg-white p-6 shadow-soft">
-            <Summary service={service} slot={slot} tz={tz} professionalName={professionalName} coupon={coupon} extras={chosenOffers} />
+            <Summary
+              service={service}
+              slot={slot}
+              tz={tz}
+              professionalName={professionalName}
+              coupon={coupon}
+              extras={chosenOffers}
+              referralDiscount={referralDiscount}
+              referralLabel={refPreview?.kind === "friend" ? "Desconto de amiga indicada" : "Desconto por indicação"}
+            />
+            {refPreview && !coupon ? (
+              <p className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800" data-testid="referral-discount">
+                {refPreview.kind === "friend"
+                  ? "Desconto de boas-vindas por indicação aplicado."
+                  : "Você ganhou este desconto por indicar uma amiga. Obrigada! 💛"}
+              </p>
+            ) : refPreview && coupon ? (
+              <p className="mt-3 text-[12.5px] text-muted">Seu desconto de indicação não acumula com cupom e fica guardado para o próximo agendamento.</p>
+            ) : null}
             <div className="mt-5 rounded-2xl border border-dashed border-champagne/70 p-4" data-testid="coupon-box">
               {coupon ? (
                 <div className="flex items-center justify-between gap-3 text-sm">
@@ -660,6 +739,8 @@ function Summary({
   professionalName,
   coupon,
   extras = [],
+  referralDiscount = 0,
+  referralLabel = "Desconto por indicação",
 }: {
   service: PublicService;
   slot: Slot;
@@ -667,6 +748,8 @@ function Summary({
   professionalName: string | null;
   coupon?: CouponPreview | null;
   extras?: PublicOffer[];
+  referralDiscount?: number;
+  referralLabel?: string;
 }) {
   const extrasPrice = extras.reduce((t, o) => t + o.priceCents, 0);
   const extrasMinutes = extras.reduce((t, o) => t + o.durationMinutes, 0);
@@ -684,8 +767,10 @@ function Summary({
       : extras.length
         ? [[service.name, formatMoney(service.price_cents)]]
         : []),
+    ...(!coupon && referralDiscount > 0 && !extras.length ? [["Valor do serviço", formatMoney(service.price_cents)]] : []),
+    ...(!coupon && referralDiscount > 0 ? [[referralLabel, `− ${formatMoney(referralDiscount)}`]] : []),
     ...extras.map((o) => [`${o.name} (oferta)`, formatMoney(o.priceCents)]),
-    [coupon || extras.length ? "Valor final" : "Valor", formatMoney(mainPrice + extrasPrice)],
+    [coupon || extras.length || referralDiscount > 0 ? "Valor final" : "Valor", formatMoney(mainPrice + extrasPrice - (coupon ? 0 : referralDiscount))],
     ...(professionalName ? [["Profissional", professionalName]] : []),
   ];
   return (

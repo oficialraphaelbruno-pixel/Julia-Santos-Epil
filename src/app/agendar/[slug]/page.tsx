@@ -5,8 +5,8 @@ import { CalendarOff, Search } from "lucide-react";
 import { BookingShell, BookingWizard } from "@/components/booking/booking-wizard";
 import { WhatsAppIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
-import { getLinkCoupon, getPublicBookingData, getPublicBusiness } from "@/lib/public-data";
-import { cleanCouponCode } from "@/lib/coupon-code";
+import { getLinkCoupon, getPublicBookingData, getPublicBusiness, getReferralInfo } from "@/lib/public-data";
+import { cleanCouponCode, cleanReferralCode } from "@/lib/coupon-code";
 import { addDaysKey, todayKey } from "@/lib/format";
 import { SITE_URL } from "@/lib/env";
 import { whatsappLink } from "@/lib/whatsapp";
@@ -28,10 +28,10 @@ export default async function AgendarPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ servico?: string; cupom?: string }>;
+  searchParams: Promise<{ servico?: string; cupom?: string; indicacao?: string }>;
 }) {
   const { slug } = await params;
-  const { servico, cupom } = await searchParams;
+  const { servico, cupom, indicacao } = await searchParams;
   const business = await getPublicBusiness(slug);
   if (!business) notFound();
   const { settings, services, categories, professionalName, offers } = await getPublicBookingData(business.id);
@@ -59,6 +59,9 @@ export default async function AgendarPage({
   // Link de divulgação com cupom (ex.: /agendar/slug?cupom=VIRILHA30)
   const couponCode = cleanCouponCode(cupom);
   const linkCoupon = couponCode ? await getLinkCoupon(business.id, business.timezone, couponCode) : null;
+  // Link de indicação (ex.: /indicacao/MARIA7K2)
+  const referralCode = cleanReferralCode(indicacao);
+  const referral = referralCode ? await getReferralInfo(business.id, referralCode) : null;
   const couponServices = linkCoupon?.serviceIds ? services.filter((s) => linkCoupon.serviceIds!.includes(s.id)) : null;
   // Cupom de um serviço só: o link já abre com esse serviço escolhido.
   const initialServiceId = servico ?? (couponServices?.length === 1 ? couponServices[0].id : undefined);
@@ -88,6 +91,8 @@ export default async function AgendarPage({
         linkCoupon={linkCoupon ? { code: linkCoupon.code, label: linkCoupon.label, serviceNames: couponServices?.map((s) => s.name) ?? null } : null}
         linkCouponUnavailable={Boolean(couponCode && !linkCoupon)}
         offers={offers}
+        referral={referral}
+        referralUnavailable={Boolean(indicacao && !referral)}
         siteUrl={SITE_URL}
       />
     </BookingShell>

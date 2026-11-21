@@ -4,6 +4,7 @@ export const AREAS = [
   { key: "servicos", label: "Serviços e preços", hint: "Criar, editar, mudar valores e a ordem dos serviços" },
   { key: "ofertas", label: "Ofertas (order bump)", hint: "Criar e mudar preços das ofertas" },
   { key: "cupons", label: "Cupons", hint: "Criar, editar, ativar e remover cupons" },
+  { key: "indicacoes", label: "Programa de indicação", hint: "Ativar o programa e definir os descontos de quem indica e da amiga" },
   { key: "horarios", label: "Horários de funcionamento", hint: "Expediente e dias especiais/feriados (bloquear um horário continua liberado)" },
   { key: "agendamento", label: "Regras do agendamento online", hint: "Sinal, Pix, prazos e política de cancelamento" },
   { key: "legal", label: "Textos legais", hint: "Política de Privacidade e Termos de Uso" },

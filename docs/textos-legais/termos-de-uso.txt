@@ -32,9 +32,11 @@ Caso o atendimento precise ser cancelado pela Julia Santos Epil, você poderá o
 
 Você se compromete a informar dados verdadeiros, um número de WhatsApp válido e um e-mail válido, pois é por eles que enviamos a confirmação, as instruções do sinal e os lembretes.
 
-7. Cupons de desconto
+7. Cupons de desconto e indicações
 
 Cupons seguem as regras informadas em cada campanha (validade, limite de usos e serviços participantes). É permitido um cupom por agendamento, e o sinal é calculado sobre o valor já com desconto.
+
+Quando o programa de indicação estiver ativo, cada cliente tem um link pessoal para indicar amigas. A amiga indicada precisa ser cliente nova (WhatsApp e e-mail ainda não cadastrados) e pode ganhar desconto no primeiro agendamento, conforme informado no site. Quem indicou ganha o desconto informado no programa depois que a amiga for atendida; o desconto é aplicado automaticamente no próximo agendamento online feito com o mesmo WhatsApp e e-mail do cadastro, dentro da validade informada. Não é possível indicar a si mesma, os descontos de indicação não se somam a cupons, não são convertidos em dinheiro e voltam a ficar disponíveis se o agendamento em que foram usados for cancelado. O studio pode cancelar descontos obtidos de forma indevida e alterar ou encerrar o programa, preservando os descontos já liberados dentro da validade.
 
 8. Link de gerenciamento
 

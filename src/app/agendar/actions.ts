@@ -14,7 +14,9 @@ import { clientBookingSchema, dateKeySchema, slugSchema } from "@/lib/schemas";
 import type { ActionResult } from "@/lib/action";
 import { zodFieldErrors } from "@/lib/action";
 import { buildDepositInfo, type DepositInfo } from "@/lib/pix-server";
-import { getPublicBookingData, resolveOffers } from "@/lib/public-data";
+import { clientReferralLink, getPublicBookingData, getReferralProgram, resolveOffers } from "@/lib/public-data";
+import { cleanReferralCode, discountText } from "@/lib/coupon-code";
+import { SITE_URL } from "@/lib/env";
 
 export interface Slot {
   start: string;
@@ -76,6 +78,34 @@ export interface BookingCreated {
   token: string;
   status: "pending" | "confirmed";
   deposit: DepositInfo | null;
+  /** Link pessoal de indicação da cliente (programa ativo) e o que ela ganha por indicação. */
+  referral: { link: string; rewardLabel: string } | null;
+  /** Desconto de indicação aplicado neste agendamento. */
+  referralDiscountCents: number;
+}
+
+export interface ReferralPreview {
+  kind: "reward" | "friend";
+  discountCents: number;
+}
+
+/** Prévia do desconto de indicação na revisão (não consome nada). */
+export async function previewReferralAction(slug: string, serviceId: string, phone: string, email: string, code?: string | null): Promise<ReferralPreview | null> {
+  if (!slugSchema.safeParse(slug).success || !uuid.safeParse(serviceId).success) return null;
+  if (!(await checkRateLimit("indicacao", 20, 600))) return null;
+  const business = await getPublicBusiness(slug);
+  if (!business) return null;
+  const p = normalizeBrazilPhone(phone);
+  if (!p) return null;
+  const { data } = await createServiceClient().rpc("referral_preview", {
+    p_business_id: business.id,
+    p_service_id: serviceId,
+    p_phone: p,
+    p_email: (email ?? "").trim().toLowerCase().slice(0, 160),
+    p_code: cleanReferralCode(code ?? null),
+  });
+  const row = (data as { kind: "reward" | "friend"; discount_cents: number }[] | null)?.[0];
+  return row && row.discount_cents > 0 ? { kind: row.kind, discountCents: row.discount_cents } : null;
 }
 
 export interface CouponPreview {
@@ -113,6 +143,7 @@ export async function createBookingAction(input: {
   client: unknown;
   couponCode?: string;
   offerIds?: string[];
+  referralCode?: string | null;
 }): Promise<ActionResult<BookingCreated>> {
   const base = z
     .object({ slug: slugSchema, serviceId: uuid, startsAt: z.iso.datetime({ offset: true }) })
@@ -148,7 +179,7 @@ export async function createBookingAction(input: {
 
   const { token, hash } = newManageToken();
   const db = createServiceClient();
-  const { data, error } = await db.rpc("create_online_booking_v3", {
+  const { data, error } = await db.rpc("create_online_booking_v4", {
     p_business_id: business.id,
     p_service_id: base.data.serviceId,
     p_starts_at: base.data.startsAt,
@@ -160,6 +191,7 @@ export async function createBookingAction(input: {
     p_manage_token_hash: hash,
     p_coupon_code: input.couponCode ? String(input.couponCode).slice(0, 30) : null,
     p_offer_ids: offers.ids.length ? offers.ids : null,
+    p_referral_code: cleanReferralCode(input.referralCode ?? null),
   });
 
   if (error) {
@@ -170,7 +202,7 @@ export async function createBookingAction(input: {
   const row = (data as { appointment_id: string; reference_code: string; status: "pending" | "confirmed" }[])[0];
   const { data: saved } = await db
     .from("appointments")
-    .select("status, deposit_cents, deposit_status, deposit_due_at")
+    .select("status, deposit_cents, deposit_status, deposit_due_at, client_id, referral_discount_cents")
     .eq("id", row.appointment_id)
     .single();
   let status = (saved?.status ?? row.status) as "pending" | "confirmed";
@@ -193,5 +225,14 @@ export async function createBookingAction(input: {
           fallbackCity: business.address_city,
         })
       : null;
-  return { ok: true, data: { reference: row.reference_code, token, status, deposit } };
+  // Link de indicação da própria cliente (para indicar amigas)
+  let referral: BookingCreated["referral"] = null;
+  if (saved?.client_id) {
+    const [link, program] = await Promise.all([clientReferralLink(business.id, saved.client_id, SITE_URL), getReferralProgram(business.id)]);
+    if (link && program) referral = { link, rewardLabel: discountText(program.reward_type, program.reward_value) };
+  }
+  return {
+    ok: true,
+    data: { reference: row.reference_code, token, status, deposit, referral, referralDiscountCents: saved?.referral_discount_cents ?? 0 },
+  };
 }

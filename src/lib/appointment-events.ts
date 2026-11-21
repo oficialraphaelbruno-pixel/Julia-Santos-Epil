@@ -258,7 +258,91 @@ export async function notifyAppointment(appointmentId: string, event: Appointmen
   }
 }
 
+/**
+ * Indicação: quando a amiga indicada é atendida (concluído), o banco libera o desconto de quem indicou.
+ * Aqui avisamos quem indicou por e-mail (uma vez por desconto), com o link pessoal para indicar de novo.
+ */
+export async function notifyReferralReward(appointmentId: string) {
+  const db = createServiceClient();
+  const { data: appt } = await db.from("appointments").select("business_id, client_id").eq("id", appointmentId).maybeSingle();
+  if (!appt) return;
+  const { data: ref } = await db
+    .from("referrals")
+    .select("id, status, referrer:clients!referrals_business_id_referrer_client_id_fkey(id, full_name, email, phone), referred:clients!referrals_business_id_referred_client_id_fkey(full_name)")
+    .eq("business_id", appt.business_id)
+    .eq("referred_client_id", appt.client_id)
+    .eq("status", "qualified")
+    .maybeSingle();
+  const r = ref as unknown as {
+    id: string;
+    referrer: { id: string; full_name: string; email: string | null; phone: string } | null;
+    referred: { full_name: string } | null;
+  } | null;
+  if (!r?.referrer?.email || isAnonymizedPhone(r.referrer.phone)) return;
+  const { data: reward } = await db
+    .from("referral_rewards")
+    .select("id, status, discount_type, discount_value, expires_at")
+    .eq("referral_id", r.id)
+    .eq("status", "available")
+    .maybeSingle();
+  if (!reward) return;
+  const [{ data: settings }, { data: business }] = await Promise.all([
+    db.from("notification_settings").select("email_enabled, email_reply_to").eq("business_id", appt.business_id).maybeSingle(),
+    db.from("businesses").select("name, email, logo_url, whatsapp_phone, timezone, slug").eq("id", appt.business_id).maybeSingle(),
+  ]);
+  if (!settings?.email_enabled || !business || !emailConfig().configured) return;
+  const dedupeKey = `referral_reward:${reward.id}:email`;
+  const { count } = await db.from("message_logs").select("id", { count: "exact", head: true }).eq("dedupe_key", dedupeKey).eq("status", "sent");
+  if ((count ?? 0) > 0) return;
+
+  const { discountText } = await import("@/lib/coupon-code");
+  const { clientReferralLink } = await import("@/lib/public-data");
+  const link = await clientReferralLink(appt.business_id, r.referrer.id, SITE_URL);
+  const first = r.referrer.full_name.split(" ")[0];
+  const friend = r.referred?.full_name.split(" ")[0] ?? "sua amiga";
+  const discount = discountText(reward.discount_type, reward.discount_value);
+  const validity = reward.expires_at ? ` Ele vale até ${formatDate(reward.expires_at, business.timezone)}.` : "";
+  const bookUrl = `${SITE_URL}/agendar/${business.slug}`;
+  const message = `Oi, ${first}! ${friend} veio ao studio por indicação sua — obrigada pela confiança! 💛\n\nVocê ganhou ${discount} no seu próximo atendimento.${validity}\n\nÉ só agendar pelo site com o mesmo WhatsApp e e-mail do seu cadastro: o desconto entra sozinho no resumo.${link ? `\n\nQuer indicar mais amigas? Seu link pessoal: ${link}` : ""}`;
+  const html = renderEmailHtml({
+    businessName: business.name,
+    logoUrl: business.logo_url,
+    title: "Você ganhou um desconto por indicação 🎁",
+    message,
+    details: [
+      ["Desconto", discount],
+      ...(reward.expires_at ? ([["Válido até", formatDate(reward.expires_at, business.timezone)]] as [string, string][]) : []),
+    ],
+    ctaLabel: "Agendar com desconto",
+    ctaUrl: bookUrl,
+    footer: business.whatsapp_phone ? `${business.name} · WhatsApp ${formatPhone(business.whatsapp_phone)}` : business.name,
+  });
+  const sent = await sendEmail({
+    to: r.referrer.email,
+    subject: `Você ganhou ${discount} por indicação — ${business.name}`,
+    html,
+    text: `${message}\n\nAgendar: ${bookUrl}`,
+    replyTo: settings.email_reply_to ?? business.email,
+    fromName: business.name,
+  });
+  await db.from("message_logs").insert({
+    business_id: appt.business_id,
+    appointment_id: appointmentId,
+    channel: "email",
+    template: "indicacao_premio",
+    dedupe_key: sent.ok ? dedupeKey : null,
+    recipient: r.referrer.email,
+    status: sent.ok ? "sent" : sent.skipped ? "skipped" : "failed",
+    provider_message_id: sent.ok ? sent.id : null,
+    error: sent.ok ? null : (sent.error?.slice(0, 500) ?? null),
+  });
+}
+
 /** Ponto único chamado após qualquer alteração de agendamento. Nunca lança erro. */
 export async function afterAppointmentChange(appointmentId: string, event: AppointmentEvent, opts: { manageToken?: string } = {}) {
-  await Promise.allSettled([syncAppointmentToGoogle(appointmentId), notifyAppointment(appointmentId, event, opts)]);
+  await Promise.allSettled([
+    syncAppointmentToGoogle(appointmentId),
+    notifyAppointment(appointmentId, event, opts),
+    ...(event === "complete" ? [notifyReferralReward(appointmentId)] : []),
+  ]);
 }

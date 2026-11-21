@@ -83,3 +83,15 @@
 - O bloqueio vale no banco de dados (não só na tela). Área bloqueada mostra aviso "Edição bloqueada pelo administrador do painel"; Financeiro some do menu.
 - Sempre liberado: agenda, clientes, confirmação de sinal, bloqueio de horário, pedidos LGPD das clientes e a própria senha.
 - Só o administrador geral altera a lista de usuários (antes qualquer proprietária podia).
+
+## Programa de indicação (Painel → Indicações)
+
+- Desativado por padrão. A Julia ativa e define: desconto de quem indica (% ou R$), desconto opcional da amiga indicada (só no 1º agendamento) e validade em dias.
+- Cada cliente tem um link pessoal `/indicacao/CODIGO` (ex.: `ANA7K2P`). Ele aparece na tela de confirmação do agendamento (copiar / WhatsApp) e na ficha da cliente no painel ("Enviar para a cliente").
+- A amiga precisa ser cliente nova (WhatsApp e e-mail ainda não cadastrados); ninguém indica a si mesma; cliente bloqueada ou com dados apagados não indica.
+- O histórico guarda quem indicou quem (ficha da cliente: "Indicada por" e "Indicou N amigas"; página Indicações: lista completa com situação e desconto).
+- Quando o atendimento da amiga é marcado como **Concluído**, quem indicou ganha o desconto e recebe um e-mail avisando.
+- O desconto entra sozinho no próximo agendamento online de quem indicou (precisa ser o mesmo WhatsApp **e** e-mail do cadastro). Se esse agendamento for cancelado ou marcado como falta, o desconto volta. A Julia pode cancelar/reativar um desconto na página Indicações.
+- Não acumula com cupom. O valor do agendamento já vem com o desconto e o detalhe mostra "Desconto por indicação".
+- Banco: tabelas `referral_programs`, `referrals`, `referral_rewards`; função `create_online_booking_v4`. Área de permissão: "indicacoes".
+- Teste: `npm run test:e2e:indicacoes`.

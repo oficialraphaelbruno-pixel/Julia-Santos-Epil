@@ -339,6 +339,72 @@ begin
 end $$;
 reset role;
 
+-- ---------- Programa de indicação ----------
+select set_config('request.jwt.claims', '', true);
+update public.referral_programs set enabled = true, reward_type = 'percent', reward_value = 10, friend_type = 'percent', friend_value = 5
+ where business_id = '00000000-0000-0000-0000-00000000000a';
+insert into public.clients (id, business_id, full_name, phone, email)
+values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-00000000000a', 'Márcia Indicadora', '5531944440001', 'indicadora@teste.local');
+
+do $$
+declare
+  v_day date := (select d from t_ctx) + 9;
+  v_code text; v_r record; v_a public.appointments%rowtype; v_rw public.referral_rewards%rowtype; v_p record; v_friend uuid;
+begin
+  v_code := public.client_referral_code('00000000-0000-0000-0000-0000000000d1');
+  assert v_code ~ '^MARCIA[A-Z0-9]{4}$', 'código inesperado: ' || coalesce(v_code, 'nulo');
+  assert public.client_referral_code('00000000-0000-0000-0000-0000000000d1') = v_code, 'código mudou';
+  select * into v_p from public.referral_code_info('00000000-0000-0000-0000-00000000000a', lower(v_code));
+  assert v_p.referrer_first_name = 'Márcia' and v_p.friend_value = 5, 'info do código errada';
+
+  -- prévia: amiga nova ganha 5%
+  select * into v_p from public.referral_preview('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '5531944440002', 'amiga@teste.local', v_code);
+  assert v_p.kind = 'friend' and v_p.discount_cents = 400, format('prévia amiga: %s', row_to_json(v_p));
+
+  -- amiga nova agenda com o código: 5% de desconto e indicação registrada
+  select * into v_r from public.create_online_booking_v4('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+     (v_day + time '09:00') at time zone 'America/Sao_Paulo', 'Amiga Nova', '5531944440002', 'amiga@teste.local', false, null, 'hash-amiga',
+     null, null, v_code);
+  select * into v_a from public.appointments where id = v_r.appointment_id;
+  assert v_a.price_cents = 7600 and v_a.referral_discount_cents = 400, format('desconto da amiga: %s/%s', v_a.price_cents, v_a.referral_discount_cents);
+  select id into v_friend from public.clients where phone = '5531944440002';
+  assert (select referred_by_client_id from public.clients where id = v_friend) = '00000000-0000-0000-0000-0000000000d1', 'quem indicou não salvo';
+  assert (select status from public.referrals where referred_client_id = v_friend) = 'pending', 'indicação não registrada';
+
+  -- cliente que já existia não vira indicada (nem ganha desconto de amiga)
+  select * into v_r from public.create_online_booking_v4('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+     (v_day + time '13:00') at time zone 'America/Sao_Paulo', 'Cliente Antiga', '5531911110001', null, false, null, 'hash-antiga',
+     null, null, v_code);
+  assert (select referral_discount_cents from public.appointments where id = v_r.appointment_id) = 0, 'cliente antiga ganhou desconto de amiga';
+  assert not exists (select 1 from public.referrals r join public.clients c on c.id = r.referred_client_id where c.phone = '5531911110001'), 'cliente antiga virou indicada';
+
+  -- antes do comparecimento, quem indicou ainda não tem desconto
+  assert not exists (select 1 from public.referral_rewards where client_id = '00000000-0000-0000-0000-0000000000d1'), 'desconto antes do comparecimento';
+  -- amiga compareceu: indicação qualificada e desconto de 10% para a Márcia
+  update public.appointments set status = 'completed' where manage_token_hash = 'hash-amiga';
+  assert (select status from public.referrals where referred_client_id = v_friend) = 'qualified', 'indicação não qualificada';
+  select * into v_rw from public.referral_rewards where client_id = '00000000-0000-0000-0000-0000000000d1';
+  assert v_rw.status = 'available' and v_rw.discount_value = 10, 'desconto não criado';
+
+  -- prévia para a Márcia exige WhatsApp E e-mail do cadastro
+  select * into v_p from public.referral_preview('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '5531944440001', 'outro@teste.local');
+  assert v_p is null or v_p.kind is null, 'prévia revelou desconto sem o e-mail certo';
+  select * into v_p from public.referral_preview('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '5531944440001', 'INDICADORA@teste.local');
+  assert v_p.kind = 'reward' and v_p.discount_cents = 800, format('prévia desconto: %s', row_to_json(v_p));
+
+  -- próximo agendamento da Márcia usa o desconto automaticamente
+  select * into v_r from public.create_online_booking_v4('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1',
+     (v_day + time '15:00') at time zone 'America/Sao_Paulo', 'Márcia Indicadora', '5531944440001', 'indicadora@teste.local', false, null, 'hash-marcia');
+  select * into v_a from public.appointments where id = v_r.appointment_id;
+  assert v_a.price_cents = 7200 and v_a.referral_discount_cents = 800 and v_a.referral_reward_id = v_rw.id, format('desconto não aplicado: %s', v_a.price_cents);
+  assert (select status from public.referral_rewards where id = v_rw.id) = 'used', 'desconto não marcado como usado';
+
+  -- cancelou: desconto volta
+  perform public.cancel_booking_by_token('hash-marcia', null);
+  assert (select status from public.referral_rewards where id = v_rw.id) = 'available', 'cancelamento não devolveu o desconto';
+  raise notice 'OK indicação: código, amiga nova com desconto, só clientes novas, desconto após comparecer, uso automático e devolução ao cancelar';
+end $$;
+
 -- ---------- Permissões por área e administrador geral ----------
 select set_config('request.jwt.claims', '', true);
 update public.business_members set permissions = '{"servicos": false, "legal": false}'

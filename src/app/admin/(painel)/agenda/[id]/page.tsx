@@ -165,6 +165,15 @@ export default async function AppointmentPage({ params, searchParams }: { params
                   </dd>
                 </div>
               ) : null}
+              {a.referral_discount_cents ? (
+                <div data-testid="agendamento-desconto-indicacao">
+                  <dt className="text-muted">Desconto por indicação</dt>
+                  <dd className="font-medium text-emerald-800">
+                    −{formatMoney(a.referral_discount_cents)}{" "}
+                    <span className="text-[12px] font-normal text-muted">{a.referral_reward_id ? "(prêmio de quem indicou)" : "(amiga indicada)"}</span>
+                  </dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-muted">Duração</dt>
                 <dd>{formatDuration(a.duration_minutes)}</dd>

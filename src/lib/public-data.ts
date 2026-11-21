@@ -170,3 +170,45 @@ export async function getLinkCoupon(businessId: string, timezone: string, code: 
     serviceIds: c.service_ids?.length ? (c.service_ids as string[]) : null,
   };
 }
+
+export interface ReferralInfo {
+  code: string;
+  referrerFirstName: string;
+  /** Ex.: "5% de desconto" (null quando a amiga não ganha desconto) */
+  friendLabel: string | null;
+}
+
+/** Código de indicação válido (programa ativo) → primeiro nome de quem indicou e desconto da amiga. */
+export async function getReferralInfo(businessId: string, code: string): Promise<ReferralInfo | null> {
+  const { data } = await createServiceClient().rpc("referral_code_info", { p_business_id: businessId, p_code: code });
+  const row = (data as { referrer_first_name: string; friend_type: string; friend_value: number }[] | null)?.[0];
+  if (!row) return null;
+  const { discountText } = await import("@/lib/coupon-code");
+  return { code, referrerFirstName: row.referrer_first_name, friendLabel: row.friend_value > 0 ? discountText(row.friend_type, row.friend_value) : null };
+}
+
+export interface ReferralProgram {
+  enabled: boolean;
+  reward_type: "percent" | "fixed";
+  reward_value: number;
+  friend_type: "percent" | "fixed";
+  friend_value: number;
+  reward_valid_days: number | null;
+}
+
+export async function getReferralProgram(businessId: string): Promise<ReferralProgram | null> {
+  const { data } = await createServiceClient()
+    .from("referral_programs")
+    .select("enabled, reward_type, reward_value, friend_type, friend_value, reward_valid_days")
+    .eq("business_id", businessId)
+    .maybeSingle();
+  return (data as ReferralProgram | null) ?? null;
+}
+
+/** Link pessoal de indicação da cliente (gera o código na primeira vez). null se o programa estiver desativado. */
+export async function clientReferralLink(businessId: string, clientId: string, siteUrl: string): Promise<string | null> {
+  const program = await getReferralProgram(businessId);
+  if (!program?.enabled) return null;
+  const { data } = await createServiceClient().rpc("client_referral_code", { p_client_id: clientId });
+  return typeof data === "string" && data ? `${siteUrl}/indicacao/${data}` : null;
+}

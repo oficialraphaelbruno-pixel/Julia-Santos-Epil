@@ -5,6 +5,9 @@ import { ArrowLeft, Ban, CalendarPlus, Cake, Mail, Phone } from "lucide-react";
 import { ClientProfileActions } from "@/components/admin/client-profile-actions";
 import { ClientPhoto } from "@/components/admin/client-photo";
 import { signedClientPhotos } from "@/lib/client-photos";
+import { ClientReferralCard, type ClientReferralData } from "@/components/admin/client-referral-card";
+import { clientReferralLink } from "@/lib/public-data";
+import { SITE_URL } from "@/lib/env";
 import { WhatsAppActions } from "@/components/admin/whatsapp-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +42,23 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const photoUrl = c.photo_path ? ((await signedClientPhotos(supabase, [c.photo_path])).get(c.photo_path) ?? null) : null;
   const anonymized = isAnonymizedPhone(c.phone);
   const today = todayKey(tz);
+  const [{ data: refBy }, { data: refMade }, { data: rewards }, link] = await Promise.all([
+    supabase.from("referrals").select("referrer:clients!referrals_business_id_referrer_client_id_fkey(id, full_name)").eq("referred_client_id", id).maybeSingle(),
+    supabase
+      .from("referrals")
+      .select("id, status, friend:clients!referrals_business_id_referred_client_id_fkey(id, full_name)")
+      .eq("referrer_client_id", id)
+      .order("created_at", { ascending: false }),
+    supabase.from("referral_rewards").select("id, status, discount_type, discount_value, expires_at").eq("client_id", id).order("created_at"),
+    anonymized || c.blocked_at ? Promise.resolve(null) : clientReferralLink(business.id, id, SITE_URL),
+  ]);
+  const referral: ClientReferralData = {
+    link,
+    referredBy: (refBy as unknown as { referrer: ClientReferralData["referredBy"] } | null)?.referrer ?? null,
+    made: (refMade ?? []) as unknown as ClientReferralData["made"],
+    rewards: (rewards ?? []) as ClientReferralData["rewards"],
+  };
+  const expiredRewardIds = referral.rewards.filter((r) => r.expires_at && Date.parse(r.expires_at) < now).map((r) => r.id);
   const inactive = c.last_visit && now - new Date(c.last_visit).getTime() > 90 * 864e5 && upcoming.length === 0;
 
   return (
@@ -134,6 +154,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
               </div>
             ))}
           </div>
+
+          <ClientReferralCard data={referral} phone={c.phone} firstName={c.full_name.split(" ")[0]} tz={tz} expiredIds={expiredRewardIds} />
 
           <Card>
             <CardContent>

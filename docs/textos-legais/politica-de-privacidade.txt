@@ -1,6 +1,6 @@
 Esta Política de Privacidade explica como a Julia Santos Epil trata os dados pessoais de quem agenda atendimentos por este site, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
 
-Última atualização: 16/11/2026.
+Última atualização: 21/11/2026.
 
 1. Quem é a responsável pelos seus dados
 
@@ -10,6 +10,7 @@ Julia Santos Epil, Rua Bom Pastor, 447, São Benedito, Santa Luzia - MG. Contato
 
 • Dados que você informa no agendamento: nome completo, número de WhatsApp, e-mail e observações opcionais.
 • Dados do atendimento: serviço escolhido, data e horário, valores, cupom utilizado, situação do sinal e histórico de atendimentos.
+• Indicações: se você agendar pelo link de indicação de uma cliente, registramos quem indicou você; se você indicar amigas, registramos as indicações feitas e os descontos que você ganhou e usou. Quem indicou não tem acesso aos seus dados de contato nem aos detalhes do seu atendimento.
 • Autorizações: o registro do aceite desta política e dos Termos de Uso e, se você marcar, a autorização para receber novidades.
 • Foto: o studio pode registrar uma foto sua no cadastro interno (por exemplo, para identificação ou acompanhamento do atendimento), somente com a sua autorização. As fotos ficam em área privada, acessível apenas à equipe do studio, e podem ser removidas a qualquer momento a seu pedido.
 • Dados técnicos mínimos de segurança: o endereço de conexão (IP) é usado de forma protegida, apenas para impedir abusos (como excesso de tentativas), sem identificar você.
@@ -21,12 +22,14 @@ Não usamos cookies de publicidade nem ferramentas de rastreamento no site de ag
 • Realizar e gerenciar o agendamento: reservar o horário, confirmar, remarcar e cancelar.
 • Enviar mensagens sobre o seu atendimento por e-mail e WhatsApp: confirmação, instruções e cobrança do sinal (Pix), lembretes, remarcações, cancelamentos e orientações de cuidados antes e depois do procedimento.
 • Permitir que você consulte o seu agendamento pelo site informando e-mail (ou WhatsApp) e nome completo.
+• Programa de indicação: identificar quem indicou, aplicar o desconto da amiga indicada e liberar o desconto de quem indicou depois que a amiga for atendida, avisando por e-mail.
 • Controle financeiro e cumprimento de obrigações legais.
 • Enviar novidades, promoções e cupons por e-mail e WhatsApp, somente se você autorizar.
 
 4. Bases legais (LGPD)
 
 • Execução do contrato e procedimentos preliminares: agendamento, mensagens sobre o atendimento e pagamento do sinal.
+• Execução do contrato: participação no programa de indicação, quando você usa ou compartilha um link de indicação.
 • Consentimento: envio de novidades, promoções e cupons. Você pode retirar a autorização a qualquer momento.
 • Cumprimento de obrigação legal e exercício regular de direitos: registros financeiros e de atendimentos.
 • Legítimo interesse: segurança do site e prevenção de fraudes.

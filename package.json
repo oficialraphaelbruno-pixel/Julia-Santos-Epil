@@ -20,7 +20,8 @@
     "test:e2e:link-tema": "node tests/e2e/coupon-link-theme.mjs",
     "test:e2e:apagar": "node tests/e2e/client-erase.mjs",
     "test:e2e:ofertas": "node tests/e2e/offers-block-photo.mjs",
-    "test:e2e:permissoes": "node tests/e2e/permissions.mjs"
+    "test:e2e:permissoes": "node tests/e2e/permissions.mjs",
+    "test:e2e:indicacoes": "node tests/e2e/referrals.mjs"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
