@@ -5,13 +5,14 @@ export const AREAS = [
   { key: "ofertas", label: "Ofertas (order bump)", hint: "Criar e mudar preços das ofertas" },
   { key: "cupons", label: "Cupons", hint: "Criar, editar, ativar e remover cupons" },
   { key: "indicacoes", label: "Programa de indicação", hint: "Ativar o programa e definir os descontos de quem indica e da amiga" },
+  { key: "assistente", label: "FAQ e assistente Mel", hint: "Perguntas frequentes e configurações da assistente virtual" },
   { key: "horarios", label: "Horários de funcionamento", hint: "Expediente e dias especiais/feriados (bloquear um horário continua liberado)" },
   { key: "agendamento", label: "Regras do agendamento online", hint: "Sinal, Pix, prazos e política de cancelamento" },
   { key: "legal", label: "Textos legais", hint: "Política de Privacidade e Termos de Uso" },
   { key: "integracoes", label: "Integrações", hint: "Google Agenda e WhatsApp oficial" },
   { key: "comunicacao", label: "Comunicação", hint: "Modelos de mensagens e e-mails automáticos" },
   { key: "financeiro", label: "Financeiro", hint: "Ver e lançar despesas e receitas" },
-  { key: "exportar", label: "Exportar planilhas", hint: "Baixar clientes, agendamentos e financeiro" },
+  { key: "exportar", label: "Exportar planilhas", hint: "Baixar clientes, agendamentos, financeiro e lista de e-mails" },
 ] as const;
 
 export type Area = (typeof AREAS)[number]["key"];

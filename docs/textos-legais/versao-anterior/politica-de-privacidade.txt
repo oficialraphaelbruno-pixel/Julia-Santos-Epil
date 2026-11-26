@@ -1,63 +1,66 @@
-Esta política explica como Julia Santos Epil trata os dados pessoais de quem agenda atendimentos por este site, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
+Esta Política de Privacidade explica como a Julia Santos Epil trata os dados pessoais de quem agenda atendimentos por este site, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
 
-1. Coleta de dados pessoais
+Última atualização: 21/11/2026.
 
-Para realizar seu agendamento, coletamos nome completo, número de WhatsApp e, opcionalmente, e-mail e observações informadas pela própria cliente. Também poderão ser registrados dados necessários à confirmação dos pagamentos.
+1. Quem é a responsável pelos seus dados
 
-2. Utilização dos dados
+Julia Santos Epil, Rua Bom Pastor, 447, São Benedito, Santa Luzia - MG. Contato para assuntos de privacidade: juliasantosepil@gmail.com ou pelo WhatsApp oficial informado neste site.
 
-As informações são utilizadas para gerenciar agendamentos, confirmar horários, enviar lembretes, realizar remarcações, processar cancelamentos e manter contato sobre os atendimentos.
+2. Quais dados coletamos
 
-Comunicações promocionais serão enviadas somente mediante autorização, que poderá ser revogada a qualquer momento.
+• Dados que você informa no agendamento: nome completo, número de WhatsApp, e-mail e observações opcionais.
+• Dados do atendimento: serviço escolhido, data e horário, valores, cupom utilizado, situação do sinal e histórico de atendimentos.
+• Indicações: se você agendar pelo link de indicação de uma cliente, registramos quem indicou você; se você indicar amigas, registramos as indicações feitas e os descontos que você ganhou e usou. Quem indicou não tem acesso aos seus dados de contato nem aos detalhes do seu atendimento.
+• Autorizações: o registro do aceite desta política e dos Termos de Uso e, se você marcar, a autorização para receber novidades.
+• Foto: o studio pode registrar uma foto sua no cadastro interno (por exemplo, para identificação ou acompanhamento do atendimento), somente com a sua autorização. As fotos ficam em área privada, acessível apenas à equipe do studio, e podem ser removidas a qualquer momento a seu pedido.
+• Dados técnicos mínimos de segurança: o endereço de conexão (IP) é usado de forma protegida, apenas para impedir abusos (como excesso de tentativas), sem identificar você.
 
-3. Proteção e compartilhamento
+Não usamos cookies de publicidade nem ferramentas de rastreamento no site de agendamento.
 
-Seus dados não são comercializados. As informações são armazenadas em sistemas tecnológicos utilizados para o funcionamento da plataforma, com medidas de segurança, controle de acesso e proteção das informações.
+3. Para que usamos seus dados
 
-4. Direitos e privacidade
+• Realizar e gerenciar o agendamento: reservar o horário, confirmar, remarcar e cancelar.
+• Enviar mensagens sobre o seu atendimento por e-mail e WhatsApp: confirmação, instruções e cobrança do sinal (Pix), lembretes, remarcações, cancelamentos e orientações de cuidados antes e depois do procedimento.
+• Permitir que você consulte o seu agendamento pelo site informando e-mail (ou WhatsApp) e nome completo.
+• Programa de indicação: identificar quem indicou, aplicar o desconto da amiga indicada e liberar o desconto de quem indicou depois que a amiga for atendida, avisando por e-mail.
+• Controle financeiro e cumprimento de obrigações legais.
+• Enviar novidades, promoções e cupons por e-mail e WhatsApp, somente se você autorizar.
 
-Em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), você poderá solicitar acesso, correção ou exclusão de seus dados, observadas as obrigações legais de conservação, além de exercer os demais direitos previstos na LGPD, por meio dos canais oficiais do estúdio.
+4. Bases legais (LGPD)
 
-5. Confirmação de agendamento e pagamento do sinal
+• Execução do contrato e procedimentos preliminares: agendamento, mensagens sobre o atendimento e pagamento do sinal.
+• Execução do contrato: participação no programa de indicação, quando você usa ou compartilha um link de indicação.
+• Consentimento: envio de novidades, promoções e cupons. Você pode retirar a autorização a qualquer momento.
+• Cumprimento de obrigação legal e exercício regular de direitos: registros financeiros e de atendimentos.
+• Legítimo interesse: segurança do site e prevenção de fraudes.
 
-Para garantir a reserva do horário, é necessário realizar o pagamento antecipado de 50% do valor total do procedimento escolhido.
+5. E-mails e mensagens
 
-Esse pagamento constitui um sinal de reserva e será integralmente descontado do valor do atendimento.
+• O e-mail é obrigatório no agendamento online para que você receba a confirmação, as instruções do sinal e os lembretes do seu horário.
+• Mensagens de novidades e promoções só são enviadas a quem marcou "Aceito receber novidades". Todo e-mail promocional traz o link "Não quero mais receber"; também é possível pedir o descadastro pelo WhatsApp ou e-mail.
 
-Os 50% restantes deverão ser pagos no dia da realização do procedimento.
+6. Com quem compartilhamos
 
-O agendamento será considerado confirmado somente após a identificação do pagamento do sinal e a confirmação pelo estúdio.
+Seus dados não são vendidos nem cedidos para fins comerciais. Para o site funcionar, utilizamos fornecedores de tecnologia que tratam os dados apenas conforme nossas instruções:
+• Supabase: banco de dados e acesso ao painel;
+• Vercel: hospedagem do site;
+• Resend: envio dos e-mails;
+• Google (Google Agenda): registro dos atendimentos na agenda da profissional (serviço, horário e nome da cliente);
+• WhatsApp (Meta): conversas e mensagens sobre o atendimento.
+Alguns desses fornecedores podem armazenar dados fora do Brasil, com medidas de segurança e cláusulas contratuais de proteção. O pagamento do sinal é feito por Pix diretamente no aplicativo do seu banco: não recebemos nem armazenamos dados bancários ou de cartão.
 
-6. Política de cancelamento
+7. Por quanto tempo guardamos
 
-Sabemos que imprevistos acontecem. Por isso, pedimos que qualquer solicitação de cancelamento ou remarcação seja comunicada com, no mínimo, 24 horas de antecedência.
+Pelo tempo necessário para os atendimentos e enquanto houver relacionamento, e pelos prazos exigidos por lei para registros financeiros. Quando você pede a exclusão, apagamos ou anonimizamos seus dados pessoais; os registros de atendimentos e valores podem ser mantidos de forma anônima, sem identificar você, para fins contábeis.
 
-Cancelamentos com 24 horas ou mais de antecedência: a cliente poderá solicitar a remarcação ou a devolução do sinal pago.
+8. Segurança
 
-Cancelamentos com menos de 24 horas: o sinal poderá ser retido, total ou parcialmente, quando a retenção for legalmente cabível e proporcional, em razão da reserva do horário e da dificuldade de disponibilizá-lo a outra cliente.
+O site usa conexão segura (HTTPS). O acesso ao painel é restrito à equipe do studio, com senha individual e verificação em duas etapas disponível. Cada agendamento tem um link pessoal e intransferível.
 
-Não comparecimento sem aviso prévio: poderá ocorrer retenção do sinal, respeitados os direitos previstos na legislação de consumo.
+9. Seus direitos
 
-Essas condições observam os artigos 417 e 418 do Código Civil (Lei nº 10.406/2002), relativos às arras ou sinal, e as disposições do Código de Defesa do Consumidor.
+Conforme o artigo 18 da LGPD, você pode solicitar: confirmação de que tratamos seus dados, acesso, correção, anonimização ou exclusão, portabilidade, informação sobre compartilhamento e a revogação do consentimento. Faça o pedido pelo e-mail juliasantosepil@gmail.com ou pelo WhatsApp oficial; responderemos em até 15 dias. Você também pode procurar a Autoridade Nacional de Proteção de Dados (ANPD).
 
-A retenção não será aplicada nas hipóteses em que a legislação exigir devolução, inclusive no exercício válido do direito de arrependimento.
+10. Alterações
 
-7. Direito de arrependimento
-
-Para contratações realizadas pela internet, será respeitado o direito de arrependimento de 7 dias previsto no artigo 49 do Código de Defesa do Consumidor (Lei nº 8.078/1990), quando aplicável, com devolução integral dos valores pagos.
-
-8. Remarcação de horários
-
-Solicitações de remarcação deverão ser realizadas preferencialmente com pelo menos 24 horas de antecedência e estarão sujeitas à disponibilidade da agenda.
-
-Situações excepcionais poderão ser avaliadas individualmente pelo estúdio, respeitando os direitos da cliente.
-
-9. Cancelamento pelo estúdio
-
-Caso o atendimento precise ser cancelado por iniciativa da Julia Santos Epil, a cliente poderá optar pela remarcação, conforme disponibilidade, ou pela restituição dos valores devidos, observada a legislação aplicável.
-
-10. Armazenamento e atualização
-
-Os dados pessoais serão mantidos pelo período necessário ao atendimento e ao cumprimento de obrigações legais.
-
-Esta política poderá ser atualizada, permanecendo sua versão vigente disponível no site.
+Esta política pode ser atualizada. A versão vigente fica sempre disponível nesta página, com a data da última atualização.

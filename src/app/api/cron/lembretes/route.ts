@@ -56,5 +56,7 @@ export async function GET(req: NextRequest) {
       }
     }
   }
+  // Perguntas feitas à assistente ficam guardadas por no máximo 90 dias (Política de Privacidade).
+  await db.from("assistant_logs").delete().lt("created_at", new Date(Date.now() - 90 * 864e5).toISOString());
   return NextResponse.json({ ok: true, verificados: summary });
 }

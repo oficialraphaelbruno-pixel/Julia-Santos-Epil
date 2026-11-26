@@ -3,6 +3,7 @@
  */
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
+import { pickDay } from "./pick-day.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -61,7 +62,7 @@ await step("S1", "Revisão mostra o sinal de 50% e exige aceitar os termos", asy
   const p = await c.newPage();
   await p.goto(`${BASE}/agendar/julia-santos-epil`);
   await p.getByRole("button", { name: new RegExp(service) }).click();
-  await p.locator("[role=gridcell]:not([disabled])").nth(5).click();
+  await pickDay(p, 5);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.nth(1).click();

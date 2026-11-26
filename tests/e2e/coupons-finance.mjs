@@ -4,6 +4,7 @@
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
+import { pickDay } from "./pick-day.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -84,7 +85,7 @@ async function reachReview(ctx, phone, name) {
   const p = await ctx.newPage();
   await p.goto(`${BASE}/agendar/julia-santos-epil`);
   await p.getByRole("button", { name: new RegExp(`Virilha ${stamp}`) }).click();
-  await p.locator("[role=gridcell]:not([disabled])").nth(6).click();
+  await pickDay(p, 6);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.nth(name.includes("Duda") ? 2 : 0).click();

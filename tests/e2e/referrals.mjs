@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
+import { pickDay } from "./pick-day.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -85,7 +86,7 @@ await step("R3", "O link redireciona para o agendamento com a indicação", asyn
 });
 
 async function book(p, { name, phone, email, expectDiscount }) {
-  await p.locator("[role=gridcell]:not([disabled])").nth(3).click();
+  await pickDay(p, 3);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.nth(Math.floor(Math.random() * 3)).click();

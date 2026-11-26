@@ -4,6 +4,7 @@
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
+import { pickDay } from "./pick-day.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -69,7 +70,7 @@ await step("O2", "Cliente agenda Nariz e adiciona a oferta: valor e duração so
   await offer.getByText("economize R$ 10,00").waitFor();
   await offer.locator("input[type=checkbox]").check();
   await p.screenshot({ path: "tests/e2e/screenshots/oferta-cliente.png" });
-  await p.locator("[role=gridcell]:not([disabled])").nth(4).click();
+  await pickDay(p, 4);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.first().click();
@@ -102,7 +103,7 @@ await step("B1", "Julia bloqueia a cliente; ela não consegue agendar pelo site 
   const ctx = await browser.newContext({ ...devices["iPhone 13"] });
   const p = await ctx.newPage();
   await p.goto(`${BASE}/agendar/julia-santos-epil?servico=${nariz}`);
-  await p.locator("[role=gridcell]:not([disabled])").nth(6).click();
+  await pickDay(p, 6);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.first().click();

@@ -4,6 +4,7 @@
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
+import { pickDay } from "./pick-day.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -66,7 +67,7 @@ await step("L2", "Cliente abre o link curto, serviço já escolhido, e-mail obri
   await p.getByTestId("link-coupon-banner").getByText(`30% de desconto em Virilha Link ${stamp}`).waitFor();
   await p.screenshot({ path: "tests/e2e/screenshots/cupom-link-cliente.png" });
   // serviço do cupom já escolhido: abre direto no calendário
-  await p.locator("[role=gridcell]:not([disabled])").nth(5).click();
+  await pickDay(p, 5);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.first().click();

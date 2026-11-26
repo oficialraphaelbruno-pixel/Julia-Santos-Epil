@@ -1,11 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarCheck, CalendarHeart, Clock3, MapPin, MousePointerClick, Sparkles, UserRound } from "lucide-react";
+import { CalendarCheck, CalendarHeart, Clock3, HelpCircle, MapPin, MousePointerClick, Sparkles, UserRound } from "lucide-react";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
 import { ServiceCard } from "@/components/site/service-card";
 import { InstagramIcon, WhatsAppIcon } from "@/components/site/icons";
+import { NewsletterForm } from "@/components/site/newsletter-form";
+import { MelWidget } from "@/components/site/mel-widget";
 import { Button } from "@/components/ui/button";
+import { instagramHandle } from "@/lib/faq-content";
 import { businessAddress, type PublicBusiness, type PublicService } from "@/lib/public-data";
 import type { Category } from "@/lib/types";
 import { formatPhone } from "@/lib/phone";
@@ -23,11 +26,13 @@ export function BusinessSite({
   services,
   categories,
   onlineEnabled,
+  assistant = null,
 }: {
   business: PublicBusiness;
   services: PublicService[];
   categories: Category[];
   onlineEnabled: boolean;
+  assistant?: { name: string; welcome: string } | null;
 }) {
   const bookingHref = `/agendar/${business.slug}`;
   const address = businessAddress(business);
@@ -213,15 +218,20 @@ export function BusinessSite({
                 </li>
               ))}
             </ol>
-            {onlineEnabled ? (
-              <div className="mt-12 text-center">
+            <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              {onlineEnabled ? (
                 <Button asChild size="lg">
                   <Link href={bookingHref}>
                     <MousePointerClick /> Agendar meu horário
                   </Link>
                 </Button>
-              </div>
-            ) : null}
+              ) : null}
+              <Button asChild size="lg" variant="outline" data-testid="home-duvidas">
+                <Link href="/duvidas">
+                  <HelpCircle /> Dúvidas frequentes
+                </Link>
+              </Button>
+            </div>
           </div>
         </section>
 
@@ -303,6 +313,16 @@ export function BusinessSite({
           </div>
         </section>
 
+        {/* ===================== NOVIDADES ===================== */}
+        <section id="novidades" className="scroll-mt-20 bg-white py-16 sm:py-20">
+          <div className="mx-auto max-w-2xl px-5 text-center sm:px-8">
+            <p className="ornament">Fique por dentro</p>
+            <h2 className="mt-5 text-3xl text-ink sm:text-4xl">Receba as promoções em primeira mão</h2>
+            <p className="mx-auto mt-3 max-w-md text-muted">Novidades, datas especiais e cupons direto no seu e-mail.</p>
+            <NewsletterForm slug={business.slug} source="site" className="mx-auto mt-7 max-w-lg text-left" />
+          </div>
+        </section>
+
         {/* ===================== CTA FINAL ===================== */}
         {onlineEnabled ? (
           <section id="agendar" className="relative overflow-hidden bg-ink py-20 text-center text-white">
@@ -321,6 +341,17 @@ export function BusinessSite({
       </main>
 
       <SiteFooter business={business} />
+      {assistant ? (
+        <MelWidget
+          slug={business.slug}
+          name={assistant.name}
+          welcome={assistant.welcome}
+          bookingHref={onlineEnabled ? bookingHref : null}
+          whatsappHref={wa}
+          instagramHref={business.instagram_url}
+          instagramHandle={instagramHandle(business.instagram_url)}
+        />
+      ) : null}
     </>
   );
 }

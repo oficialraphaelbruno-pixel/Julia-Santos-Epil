@@ -11,6 +11,7 @@ const NAV = [
   { href: "#servicos", label: "Serviços" },
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#contato", label: "Contato" },
+  { href: "/duvidas", label: "Dúvidas" },
 ];
 
 export function SiteHeader({ logo, name, bookingHref }: { logo: string | null; name: string; bookingHref: string }) {

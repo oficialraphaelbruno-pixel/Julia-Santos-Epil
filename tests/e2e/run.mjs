@@ -12,6 +12,7 @@
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
+import { pickDay } from "./pick-day.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -233,7 +234,7 @@ await step("TESTE 8b", "Cliente reagenda e cancela pelo link seguro", async () =
   await p.getByTestId("manage-link").click();
   await p.getByText(ref, { exact: true }).first().waitFor();
   await p.getByRole("button", { name: "Reagendar" }).click();
-  await p.locator("[role=gridcell]:not([disabled])").nth(3).click();
+  await pickDay(p, 3);
   const slots = p.locator("button[aria-pressed], button[aria-selected]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.last().click();

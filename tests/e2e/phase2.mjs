@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { pickDay } from "./pick-day.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
@@ -82,7 +83,7 @@ await step("F2.1", "Agendamento online envia e-mail real com link de gerenciamen
   const p = await c.newPage();
   await p.goto(`${BASE}/agendar/${SLUG}`);
   await p.getByRole("button", { name: new RegExp(service) }).click();
-  await p.locator("[role=gridcell]:not([disabled])").nth(4).click();
+  await pickDay(p, 4);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.nth(2).click();
@@ -152,6 +153,8 @@ await step("F2.4", "Lembretes automáticos: protegido por segredo, envia vésper
   // agendamento para amanhã com e-mail
   const tomorrow = sql(`select ((now() at time zone 'America/Sao_Paulo')::date + 1)::text`);
   const cid = sql(`insert into clients (business_id, full_name, phone, email) select id, 'Rita Lembrete', '553196666${stamp.slice(0, 4)}', 'rita${stamp}@exemplo.com.br' from businesses where slug='${SLUG}' returning id`).split("\n")[0];
+  // libera o horário usado por execuções anteriores do teste no mesmo dia
+  sql(`update appointments set status='cancelled' where service_name='Lembrete Teste' and status <> 'cancelled'`);
   sql(`insert into appointments (business_id, professional_id, service_id, client_id, starts_at, ends_at, status, reference_code, service_name, price_cents, duration_minutes)
        select b.id, p.id, null, '${cid}', ('${tomorrow} 07:00'::timestamp at time zone 'America/Sao_Paulo'), ('${tomorrow} 07:30'::timestamp at time zone 'America/Sao_Paulo'), 'confirmed', 'AG-L${stamp}', 'Lembrete Teste', 5000, 30
        from businesses b join professionals p on p.business_id=b.id where b.slug='${SLUG}' limit 1`);

@@ -1,6 +1,6 @@
 Esta Política de Privacidade explica como a Julia Santos Epil trata os dados pessoais de quem agenda atendimentos por este site, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
 
-Última atualização: 21/11/2026.
+Última atualização: 26/11/2026.
 
 1. Quem é a responsável pelos seus dados
 
@@ -11,6 +11,8 @@ Julia Santos Epil, Rua Bom Pastor, 447, São Benedito, Santa Luzia - MG. Contato
 • Dados que você informa no agendamento: nome completo, número de WhatsApp, e-mail e observações opcionais.
 • Dados do atendimento: serviço escolhido, data e horário, valores, cupom utilizado, situação do sinal e histórico de atendimentos.
 • Indicações: se você agendar pelo link de indicação de uma cliente, registramos quem indicou você; se você indicar amigas, registramos as indicações feitas e os descontos que você ganhou e usou. Quem indicou não tem acesso aos seus dados de contato nem aos detalhes do seu atendimento.
+• Inscrição para novidades: se você deixar seu e-mail na caixa “Fique por dentro” do site ou no chat da assistente virtual, guardamos o e-mail, a origem da inscrição e a data do aceite.
+• Assistente virtual (Mel): o texto das perguntas digitadas no chat. Guardamos apenas o texto da pergunta, sem nome, telefone ou outro dado que identifique você (números longos e e-mails digitados são apagados do registro), por até 90 dias, para melhorar as respostas.
 • Autorizações: o registro do aceite desta política e dos Termos de Uso e, se você marcar, a autorização para receber novidades.
 • Foto: o studio pode registrar uma foto sua no cadastro interno (por exemplo, para identificação ou acompanhamento do atendimento), somente com a sua autorização. As fotos ficam em área privada, acessível apenas à equipe do studio, e podem ser removidas a qualquer momento a seu pedido.
 • Dados técnicos mínimos de segurança: o endereço de conexão (IP) é usado de forma protegida, apenas para impedir abusos (como excesso de tentativas), sem identificar você.
@@ -23,6 +25,7 @@ Não usamos cookies de publicidade nem ferramentas de rastreamento no site de ag
 • Enviar mensagens sobre o seu atendimento por e-mail e WhatsApp: confirmação, instruções e cobrança do sinal (Pix), lembretes, remarcações, cancelamentos e orientações de cuidados antes e depois do procedimento.
 • Permitir que você consulte o seu agendamento pelo site informando e-mail (ou WhatsApp) e nome completo.
 • Programa de indicação: identificar quem indicou, aplicar o desconto da amiga indicada e liberar o desconto de quem indicou depois que a amiga for atendida, avisando por e-mail.
+• Responder dúvidas pela assistente virtual Mel, com base nas informações cadastradas pelo studio (serviços, cuidados, pagamento e agendamento).
 • Controle financeiro e cumprimento de obrigações legais.
 • Enviar novidades, promoções e cupons por e-mail e WhatsApp, somente se você autorizar.
 
@@ -30,14 +33,14 @@ Não usamos cookies de publicidade nem ferramentas de rastreamento no site de ag
 
 • Execução do contrato e procedimentos preliminares: agendamento, mensagens sobre o atendimento e pagamento do sinal.
 • Execução do contrato: participação no programa de indicação, quando você usa ou compartilha um link de indicação.
-• Consentimento: envio de novidades, promoções e cupons. Você pode retirar a autorização a qualquer momento.
+• Consentimento: envio de novidades, promoções e cupons (no agendamento, na caixa “Fique por dentro” ou no chat da assistente). Você pode retirar a autorização a qualquer momento.
 • Cumprimento de obrigação legal e exercício regular de direitos: registros financeiros e de atendimentos.
-• Legítimo interesse: segurança do site e prevenção de fraudes.
+• Legítimo interesse: segurança do site, prevenção de fraudes e funcionamento da assistente virtual para responder às suas dúvidas.
 
 5. E-mails e mensagens
 
 • O e-mail é obrigatório no agendamento online para que você receba a confirmação, as instruções do sinal e os lembretes do seu horário.
-• Mensagens de novidades e promoções só são enviadas a quem marcou "Aceito receber novidades". Todo e-mail promocional traz o link "Não quero mais receber"; também é possível pedir o descadastro pelo WhatsApp ou e-mail.
+• Mensagens de novidades e promoções só são enviadas a quem marcou "Aceito receber novidades" no agendamento ou deixou o e-mail para receber novidades no site ou no chat da assistente. Todo e-mail promocional traz o link "Não quero mais receber"; também é possível pedir o descadastro pelo WhatsApp ou e-mail.
 
 6. Com quem compartilhamos
 
@@ -46,7 +49,9 @@ Seus dados não são vendidos nem cedidos para fins comerciais. Para o site func
 • Vercel: hospedagem do site;
 • Resend: envio dos e-mails;
 • Google (Google Agenda): registro dos atendimentos na agenda da profissional (serviço, horário e nome da cliente);
-• WhatsApp (Meta): conversas e mensagens sobre o atendimento.
+• WhatsApp (Meta): conversas e mensagens sobre o atendimento;
+• OpenAI: geração das respostas da assistente virtual Mel (recebe o texto das perguntas digitadas no chat e as informações públicas do studio; não recebe seu nome, telefone ou e-mail de cadastro).
+Não digite no chat da assistente dados de saúde, documentos ou outras informações pessoais. Para casos específicos, fale diretamente com o studio pelo WhatsApp.
 Alguns desses fornecedores podem armazenar dados fora do Brasil, com medidas de segurança e cláusulas contratuais de proteção. O pagamento do sinal é feito por Pix diretamente no aplicativo do seu banco: não recebemos nem armazenamos dados bancários ou de cartão.
 
 7. Por quanto tempo guardamos

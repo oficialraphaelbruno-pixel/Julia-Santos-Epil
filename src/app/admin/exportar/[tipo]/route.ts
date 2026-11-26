@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminContext } from "@/lib/auth";
 import { formatDate, formatTime, localToUtcIso } from "@/lib/format";
 import { PAYMENT_METHOD_LABEL, STATUS_LABEL, type AppointmentStatus } from "@/lib/constants";
+import { contactsToResendCsv, filterContacts, loadEmailContacts } from "@/lib/email-list";
 
 function csv(rows: (string | number | null | undefined)[][]) {
   const esc = (v: string | number | null | undefined) => {
@@ -22,6 +23,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
   }
   const tz = ctx.business.timezone;
   let body: string;
+
+  if (tipo === "emails.csv") {
+    // Formato da importação de contatos do Resend (vírgula, cabeçalho email/first_name/last_name).
+    const sp = new URL(req.url).searchParams;
+    const rows = filterContacts(
+      await loadEmailContacts(ctx.supabase, ctx.business.id),
+      Object.fromEntries(["q", "origem", "situacao", "servico", "inativas", "aniversario"].map((k) => [k, sp.get(k) ?? undefined])),
+      Date.now(),
+    );
+    return new NextResponse(contactsToResendCsv(rows), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="emails-novidades-${new Date().toISOString().slice(0, 10)}.csv"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
 
   if (tipo === "clientes.csv") {
     const { data } = await ctx.supabase

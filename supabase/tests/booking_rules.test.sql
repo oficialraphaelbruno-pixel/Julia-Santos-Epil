@@ -443,6 +443,74 @@ begin
 end $$;
 reset role;
 
+-- ---------- FAQ, assistente e lista de novidades ----------
+select set_config('request.jwt.claims', '', true);
+do $$
+begin
+  -- inscrição normaliza o e-mail, não duplica e reinscreve quem saiu
+  perform public.subscribe_newsletter('00000000-0000-0000-0000-00000000000a', '  Nova.Leitora@Teste.local ', 'site');
+  perform public.subscribe_newsletter('00000000-0000-0000-0000-00000000000a', 'nova.leitora@teste.local', 'assistente');
+  assert (select count(*) from public.newsletter_subscribers where email = 'nova.leitora@teste.local') = 1, 'inscrição duplicada';
+  update public.newsletter_subscribers set unsubscribed_at = now() where email = 'nova.leitora@teste.local';
+  perform public.subscribe_newsletter('00000000-0000-0000-0000-00000000000a', 'nova.leitora@teste.local', 'faq');
+  assert (select unsubscribed_at is null from public.newsletter_subscribers where email = 'nova.leitora@teste.local'), 'não reinscreveu';
+  begin
+    perform public.subscribe_newsletter('00000000-0000-0000-0000-00000000000a', 'sem-arroba', 'site');
+    raise exception 'FALHOU: aceitou e-mail inválido';
+  exception when others then assert sqlerrm = 'EMAIL_INVALIDO', sqlerrm; end;
+  assert (select not enabled and name = 'Mel' from public.assistant_settings where business_id = '00000000-0000-0000-0000-00000000000a'), 'assistente deveria começar desligada';
+  raise notice 'OK novidades: e-mail normalizado, sem duplicar, reinscrição e validação; assistente começa desligada';
+end $$;
+set local role anon;
+do $$
+begin
+  begin
+    perform 1 from public.newsletter_subscribers limit 1;
+    raise exception 'FALHOU: visitante leu a lista de e-mails';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.subscribe_newsletter('00000000-0000-0000-0000-00000000000a', 'invasora@teste.local', 'site');
+    raise exception 'FALHOU: visitante chamou a inscrição direto no banco';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform 1 from public.faq_items limit 1;
+    raise exception 'FALHOU: visitante leu o FAQ direto no banco';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK visitante não acessa lista de e-mails, FAQ nem a função de inscrição direto no banco';
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.business_members set permissions = '{"assistente": false}' where user_id = '00000000-0000-0000-0000-0000000000a1';
+update public.profiles set is_platform_admin = false where id = '00000000-0000-0000-0000-0000000000a1';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+do $$
+begin
+  assert (select count(*) from public.newsletter_subscribers) >= 1, 'proprietária não vê a lista de e-mails';
+  begin
+    insert into public.faq_items (business_id, category, question, answer) values ('00000000-0000-0000-0000-00000000000a', 'outros', 'Pergunta?', 'Resposta');
+    raise exception 'FALHOU: criou FAQ com a área bloqueada';
+  exception when others then assert sqlerrm = 'AREA_BLOQUEADA', sqlerrm; end;
+  begin
+    update public.assistant_settings set enabled = true where business_id = '00000000-0000-0000-0000-00000000000a';
+    raise exception 'FALHOU: ligou a assistente com a área bloqueada';
+  exception when others then assert sqlerrm = 'AREA_BLOQUEADA', sqlerrm; end;
+  raise notice 'OK FAQ e assistente respeitam a área bloqueada; proprietária vê a lista de e-mails';
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.business_members set permissions = '{}' where user_id = '00000000-0000-0000-0000-0000000000a1';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+do $$
+begin
+  insert into public.faq_items (business_id, category, question, answer) values ('00000000-0000-0000-0000-00000000000a', 'outros', 'Atende aos sábados?', 'Resposta da Julia');
+  update public.assistant_settings set enabled = true, name = 'Mel' where business_id = '00000000-0000-0000-0000-00000000000a';
+  raise notice 'OK proprietária cria FAQ e configura a assistente com a área liberada';
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
 -- Auditoria registrou alterações críticas
 do $$
 begin

@@ -4,7 +4,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button, type ButtonProps } from "@/components/ui/button";
 
-export function CopyButton({ value, label = "Copiar link", ...props }: { value: string; label?: string } & ButtonProps) {
+export function CopyButton({
+  value,
+  label = "Copiar link",
+  successMessage = "Link copiado!",
+  ...props
+}: { value: string; label?: string; successMessage?: string } & ButtonProps) {
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -13,7 +18,7 @@ export function CopyButton({ value, label = "Copiar link", ...props }: { value: 
         try {
           await navigator.clipboard.writeText(value);
           setCopied(true);
-          toast.success("Link copiado!");
+          toast.success(successMessage);
           setTimeout(() => setCopied(false), 2000);
         } catch {
           toast.error("Não foi possível copiar. Selecione e copie manualmente.");

@@ -1,6 +1,7 @@
 /** Consulta de agendamento pela cliente (ambiente LOCAL). */
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
+import { pickDay } from "./pick-day.mjs";
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -27,7 +28,7 @@ await step("Q1", "Cliente agenda informando e-mail", async () => {
   await p.goto(`${BASE}/agendar/julia-santos-epil`);
   await p.getByTestId("link-consultar").waitFor();
   await p.getByRole("button", { name: new RegExp(service) }).click();
-  await p.locator("[role=gridcell]:not([disabled])").nth(7).click();
+  await pickDay(p, 7);
   const slots = p.locator("button[aria-pressed]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   await slots.first().click();

@@ -95,3 +95,12 @@
 - Não acumula com cupom. O valor do agendamento já vem com o desconto e o detalhe mostra "Desconto por indicação".
 - Banco: tabelas `referral_programs`, `referrals`, `referral_rewards`; função `create_online_booking_v4`. Área de permissão: "indicacoes".
 - Teste: `npm run test:e2e:indicacoes`.
+
+## Dúvidas frequentes (FAQ), assistente Mel e lista de e-mails
+
+- **Página /duvidas** (link no menu, no rodapé e na seção "Como funciona"): perguntas escritas pela Julia + respostas automáticas montadas com o que já está cadastrado (cuidados antes/depois de cada serviço, sinal, como agendar, cancelamento/remarcação, endereço). A chave Pix não aparece na página pública. Tem botões de Agendar, WhatsApp, "Siga @... no Instagram" e a caixa "Fique por dentro".
+- **"Fique por dentro das promoções"**: na página inicial, na página Dúvidas e dentro do chat da Mel. Grava e-mail, origem e data do aceite (`newsletter_subscribers`, função `subscribe_newsletter`, só pelo servidor). Corrige e-mails digitados errado (gmial → gmail).
+- **Painel → FAQ e assistente Mel**: liga/desliga, nome, boas-vindas, jeito de falar, informações extras, assuntos a evitar, limite diário (e modelo, só administrador geral); CRUD do FAQ com ordem e publicar/esconder; lista de perguntas que a Mel não soube responder (30 dias) com "Responder no FAQ"; uso do dia/30 dias. Área de permissão: "assistente".
+- **Mel (assistente virtual)**: balão com avatar no canto (página inicial e Dúvidas), botões rápidos, respostas curtas e acolhedoras, botões de ação (agendar, WhatsApp, Instagram, receber novidades). Só responde com os dados do painel, encaminha saúde para a Julia. Aparece só com `OPENAI_API_KEY` na Vercel + ligada no painel. Guia: `docs/ASSISTENTE-MEL.md`.
+- **Painel → E-mails (novidades)**: junta quem aceitou novidades no agendamento com as inscrições do site/Mel (um e-mail por linha, com as origens). Filtros: origem, situação (atendida / agendou / nunca agendou), serviço já feito, sumidas há 90+ dias, mês de aniversário, busca. "Baixar lista (CSV para o Resend)" (exige a área Exportar), "Copiar e-mails" e remover da lista.
+- Teste: `npm run test:e2e:faq-mel`.

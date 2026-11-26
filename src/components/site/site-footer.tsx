@@ -41,6 +41,9 @@ export function SiteFooter({ business }: { business: PublicBusiness }) {
               <Link href={`/agendar/${business.slug}/consultar`} className="hover:text-gold-dark">Consultar meu agendamento</Link>
             </li>
             <li>
+              <Link href="/duvidas" className="hover:text-gold-dark">Dúvidas frequentes</Link>
+            </li>
+            <li>
               <Link href="/privacidade" className="hover:text-gold-dark">Política de Privacidade</Link>
             </li>
             <li>
