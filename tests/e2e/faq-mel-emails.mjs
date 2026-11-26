@@ -40,6 +40,8 @@ const mock = createServer((req, res) => {
     const last = (msgs[msgs.length - 1]?.content ?? "").toLowerCase();
     let reply = { resposta: "Oi, flor! Antes da epilação, siga os cuidados do seu serviço 🌸", respondeu: true, acoes: ["agendar"] };
     if (last.includes("promo")) reply = { resposta: "Deixa seu e-mail que eu te aviso das promoções 💛", respondeu: true, acoes: ["novidades"] };
+    if (last.includes("era só isso")) reply = { resposta: "Foi um prazer te ajudar! 💛 Quer receber nossas promoções, descontos e cupons por e-mail?", respondeu: true, acoes: ["novidades"] };
+    if (last.includes("já tenho um agendamento")) reply = { resposta: "Você consulta, remarca ou cancela pela página de consulta 💛 Posso te ajudar em algo mais?", respondeu: true, acoes: ["consultar"] };
     if (last.includes("estacionamento")) reply = { resposta: "Essa eu não sei, flor. Fala com a Julia no WhatsApp?", respondeu: false, acoes: ["whatsapp"] };
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ choices: [{ message: { role: "assistant", content: JSON.stringify(reply) } }] }));
@@ -146,7 +148,13 @@ await step("E1", "Aba E-mails lista a inscrita, filtra por origem, exporta CSV p
   return "filtro, CSV, remoção; exportação bloqueada sem login";
 });
 
-await step("M1", "Julia liga a Mel; o balão aparece e responde usando os dados do studio", async () => {
+async function openMel(p, path = "/") {
+  await p.goto(`${BASE}${path}`);
+  await p.getByTestId("mel-open").click();
+  await p.getByTestId("mel-panel").getByText("como posso te chamar?").waitFor();
+}
+
+await step("M1", "Mel pergunta o nome, chama a cliente pelo nome e dá os cuidados do procedimento escolhido", async () => {
   await ap.goto(`${BASE}/admin/assistente`);
   await ap.getByTestId("assistant-enabled").click();
   await ap.getByTestId("salvar-assistente").click();
@@ -154,32 +162,41 @@ await step("M1", "Julia liga a Mel; o balão aparece e responde usando os dados 
   await ap.getByTestId("assistant-status").getByText("No ar").waitFor();
   const ctx = await browser.newContext({ ...devices["iPhone 13"] });
   const p = await ctx.newPage();
-  await p.goto(`${BASE}/`);
-  await p.getByTestId("mel-open").click();
-  await p.getByTestId("mel-panel").getByText("Eu sou a Mel").waitFor();
+  await openMel(p);
   await p.screenshot({ path: "tests/e2e/screenshots/mel-aberta.png" });
-  await p.getByTestId("mel-quick").getByRole("button", { name: "Como me preparar? 🌸" }).click();
-  await p.getByTestId("mel-msg-assistant").nth(1).getByText("Antes da epilação").waitFor();
-  await p.getByTestId("mel-action-agendar").waitFor();
+  await p.getByTestId("mel-input").fill("oi, meu nome é raquel");
+  await p.getByTestId("mel-send").click();
+  await p.getByText("Que alegria te conhecer, Raquel!").waitFor();
+  await p.getByTestId("mel-menu-procedimento").click();
+  await p.getByText("Qual procedimento você vai fazer, Raquel?").waitFor();
+  await p.getByTestId("mel-servicos").getByRole("button", { name: `Virilha ${stamp}` }).click();
+  await p.getByText("Antes da epilação").waitFor();
+  await p.getByTestId("mel-seguir").waitFor();
   await p.screenshot({ path: "tests/e2e/screenshots/mel-resposta.png" });
-  const system = lastRequest.body.messages[0].content;
-  for (const must of [`Antes ${stamp}`, `Depois ${stamp}`, "(31) 98888-7777", question, "Nunca invente"]) {
+  const msgs = lastRequest.body.messages;
+  const system = msgs[0].content;
+  for (const must of [`Antes ${stamp}`, `Depois ${stamp}`, "(31) 98888-7777", question, "Nunca invente", "A cliente se chama Raquel", "Posso te ajudar em algo mais?"]) {
     if (!system.includes(must)) throw new Error(`instruções sem: ${must}`);
   }
+  if (msgs[msgs.length - 1].content !== `Vou fazer Virilha ${stamp}. Quais são os cuidados antes e depois?`) throw new Error(`pergunta: ${msgs[msgs.length - 1].content}`);
+  if (msgs.some((m) => m.content?.includes("meu nome é"))) throw new Error("mensagens locais foram para a OpenAI");
   if (lastRequest.auth !== "Bearer teste-local") throw new Error("chave não enviada");
+  // encerramento: oferece promoções
+  await p.getByTestId("mel-era-so-isso").click();
+  await p.getByText("Foi um prazer").waitFor();
+  await p.getByTestId("mel-action-novidades").waitFor();
+  await p.screenshot({ path: "tests/e2e/screenshots/mel-encerramento.png" });
   await ctx.close();
-  return `modelo ${lastRequest.body.model}; prompt com cuidados, Pix e FAQ`;
+  return `modelo ${lastRequest.body.model}; nome, cuidados do serviço e convite para promoções no fim`;
 });
 
 const melEmail = `mel${stamp}@exemplo.com.br`;
-await step("M2", "Mel oferece as promoções e a pessoa deixa o e-mail no chat", async () => {
+await step("M2", "Botão “Quero receber promoções”: a pessoa deixa o e-mail no chat", async () => {
   const p = await browser.newPage();
-  await p.goto(`${BASE}/duvidas`);
-  await p.getByTestId("mel-open").click();
-  await p.getByTestId("mel-input").fill("Tem alguma promoção?");
-  await p.getByTestId("mel-send").click();
+  await openMel(p, "/duvidas");
+  await p.getByTestId("mel-pular-nome").click();
+  await p.getByTestId("mel-menu-promocoes").click();
   const box = p.getByTestId("mel-action-novidades");
-  await box.waitFor();
   await box.locator("input[type=email]").fill(melEmail);
   await box.getByRole("button", { name: "Quero receber" }).click();
   await box.getByTestId("newsletter-ok").waitFor();
@@ -191,8 +208,8 @@ await step("M2", "Mel oferece as promoções e a pessoa deixa o e-mail no chat",
 
 await step("M3", "Pergunta que a Mel não soube vai para o painel; Julia responde no FAQ", async () => {
   const p = await browser.newPage();
-  await p.goto(`${BASE}/`);
-  await p.getByTestId("mel-open").click();
+  await openMel(p);
+  await p.getByTestId("mel-pular-nome").click();
   await p.getByTestId("mel-input").fill(`Tem estacionamento ${stamp}? Meu número é 31 99999 8888`);
   await p.keyboard.press("Enter");
   await p.getByTestId("mel-action-whatsapp").waitFor();
@@ -211,14 +228,57 @@ await step("M3", "Pergunta que a Mel não soube vai para o painel; Julia respond
   return saved;
 });
 
-await step("M4", "Limite diário protege o crédito da OpenAI", async () => {
+await step("M4", "“Já tenho agendamento” leva para a consulta do agendamento", async () => {
+  const p = await browser.newPage();
+  await openMel(p);
+  await p.getByTestId("mel-input").fill("Fernanda");
+  await p.keyboard.press("Enter");
+  await p.getByTestId("mel-menu-agendamento").click();
+  const btn = p.getByTestId("mel-action-consultar");
+  await btn.waitFor();
+  const href = await btn.getAttribute("href");
+  if (href !== "/agendar/julia-santos-epil/consultar") throw new Error(`link: ${href}`);
+  await p.close();
+  return href;
+});
+
+const refPhone = `3197${stamp}55`.slice(0, 11);
+const refEmail = `gabriela${stamp}@exemplo.com.br`;
+await step("M5", "Programa de indicação pela Mel: cliente informa WhatsApp + e-mail e recebe o link pessoal", async () => {
+  sql(`update referral_programs set enabled=true, reward_type='percent', reward_value=10, friend_type='fixed', friend_value=1000, reward_valid_days=60 where business_id='${biz}'`);
+  const gid = sql(`insert into clients (business_id, full_name, phone, email, source) values ('${biz}', 'Gabriela Teste ${stamp}', '55${refPhone}', '${refEmail}', 'admin') returning id`).split("\n")[0];
+  const ctx = await browser.newContext({ ...devices["iPhone 13"] });
+  const p = await ctx.newPage();
+  await openMel(p);
+  await p.getByTestId("mel-input").fill("Gabriela");
+  await p.keyboard.press("Enter");
+  await p.getByTestId("mel-menu-indicacao").click();
+  await p.getByText("você ganha 10% de desconto no seu próximo agendamento").waitFor();
+  await p.getByText("Ela ganha R$ 10,00 de desconto no primeiro agendamento").waitFor();
+  const form = p.getByTestId("mel-indicacao-form");
+  await form.getByLabel("WhatsApp com DDD").fill(`(${refPhone.slice(0, 2)}) ${refPhone.slice(2, 7)}-${refPhone.slice(7)}`);
+  await form.getByLabel("E-mail do cadastro").fill(`errado${stamp}@exemplo.com.br`);
+  await form.getByTestId("mel-indicacao-gerar").click();
+  await form.getByText("Não encontrei um cadastro com esse WhatsApp e esse e-mail juntos").waitFor();
+  await form.getByLabel("E-mail do cadastro").fill(refEmail.toUpperCase());
+  await form.getByTestId("mel-indicacao-gerar").click();
+  const url = (await p.getByTestId("mel-indicacao-url").innerText()).trim();
+  const code = sql(`select referral_code from clients where id='${gid}'`);
+  if (!code.startsWith("GABRIELA") || !url.endsWith(`/indicacao/${code}`)) throw new Error(`link ${url} / código ${code}`);
+  await p.screenshot({ path: "tests/e2e/screenshots/mel-indicacao.png" });
+  await ctx.close();
+  sql(`update referral_programs set enabled=false where business_id='${biz}'`);
+  return url.replace(BASE, "");
+});
+
+await step("M6", "Limite diário protege o crédito da OpenAI", async () => {
   sql(`update assistant_settings set daily_limit=10 where business_id='${biz}'`);
   sql(`insert into assistant_logs (business_id, question) select '${biz}', 'x' from generate_series(1,10)`);
   sql("delete from rate_limits");
   lastRequest = null;
   const p = await browser.newPage();
-  await p.goto(`${BASE}/`);
-  await p.getByTestId("mel-open").click();
+  await openMel(p);
+  await p.getByTestId("mel-pular-nome").click();
   await p.getByTestId("mel-input").fill("Oi");
   await p.getByTestId("mel-send").click();
   await p.getByText("estou descansando").waitFor();

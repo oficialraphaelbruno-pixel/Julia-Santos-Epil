@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { FaqItem, FaqService, FaqSettings } from "@/lib/faq-content";
+import { discountText } from "@/lib/coupon-code";
 
 export interface AssistantSettings {
   enabled: boolean;
@@ -22,7 +23,7 @@ export function openaiConfigured() {
 /** Dados públicos do FAQ e da assistente (lidos no servidor com a chave secreta). */
 export const getFaqData = cache(async (businessId: string) => {
   const db = createServiceClient();
-  const [faq, services, settings, assistant] = await Promise.all([
+  const [faq, services, settings, assistant, referral] = await Promise.all([
     db
       .from("faq_items")
       .select("id, category, question, answer, sort_order, published")
@@ -50,18 +51,40 @@ export const getFaqData = cache(async (businessId: string) => {
       .select("enabled, name, welcome_message, personality, extra_info, avoid_topics, daily_limit, model")
       .eq("business_id", businessId)
       .maybeSingle(),
+    db
+      .from("referral_programs")
+      .select("enabled, reward_type, reward_value, friend_type, friend_value, reward_valid_days")
+      .eq("business_id", businessId)
+      .maybeSingle(),
   ]);
+  const ref = referral.data as {
+    enabled: boolean;
+    reward_type: string;
+    reward_value: number;
+    friend_type: string;
+    friend_value: number;
+    reward_valid_days: number | null;
+  } | null;
   return {
     faq: (faq.data ?? []) as FaqItem[],
     services: (services.data ?? []) as FaqService[],
     settings: (settings.data as FaqSettings | null) ?? null,
     assistant: (assistant.data as AssistantSettings | null) ?? null,
+    referral: ref?.enabled
+      ? {
+          rewardLabel: discountText(ref.reward_type, ref.reward_value),
+          friendLabel: ref.friend_value > 0 ? discountText(ref.friend_type, ref.friend_value) : null,
+          validDays: ref.reward_valid_days,
+        }
+      : null,
   };
 });
 
+export type PublicReferral = NonNullable<Awaited<ReturnType<typeof getFaqData>>["referral"]>;
+
 /** Configuração mínima que o site precisa para mostrar o balão da assistente. */
 export async function getPublicAssistant(businessId: string) {
-  const { assistant } = await getFaqData(businessId);
+  const { assistant, services, referral } = await getFaqData(businessId);
   if (!assistant?.enabled || !openaiConfigured()) return null;
-  return { name: assistant.name, welcome: assistant.welcome_message };
+  return { name: assistant.name, welcome: assistant.welcome_message, services: services.map((s) => s.name), referral };
 }

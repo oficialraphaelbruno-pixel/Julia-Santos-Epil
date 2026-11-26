@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { ServiceCard } from "@/components/site/service-card";
 import { InstagramIcon, WhatsAppIcon } from "@/components/site/icons";
 import { NewsletterForm } from "@/components/site/newsletter-form";
-import { MelWidget } from "@/components/site/mel-widget";
+import { MelWidget, type MelReferralInfo } from "@/components/site/mel-widget";
 import { Button } from "@/components/ui/button";
 import { instagramHandle } from "@/lib/faq-content";
 import { businessAddress, type PublicBusiness, type PublicService } from "@/lib/public-data";
@@ -32,7 +32,7 @@ export function BusinessSite({
   services: PublicService[];
   categories: Category[];
   onlineEnabled: boolean;
-  assistant?: { name: string; welcome: string } | null;
+  assistant?: { name: string; welcome: string; services: string[]; referral: MelReferralInfo | null } | null;
 }) {
   const bookingHref = `/agendar/${business.slug}`;
   const address = businessAddress(business);
@@ -346,6 +346,8 @@ export function BusinessSite({
           slug={business.slug}
           name={assistant.name}
           welcome={assistant.welcome}
+          services={assistant.services}
+          referral={assistant.referral}
           bookingHref={onlineEnabled ? bookingHref : null}
           whatsappHref={wa}
           instagramHref={business.instagram_url}

@@ -4,7 +4,9 @@ import { z } from "zod";
 import { getPublicBusiness } from "@/lib/public-data";
 import { getFaqData, openaiConfigured } from "@/lib/faq-data";
 import { assistantKnowledge } from "@/lib/faq-content";
-import { buildSystemPrompt, MEL_MAX_MESSAGE, parseMelReply, sanitizeHistory, type MelReply } from "@/lib/mel-prompt";
+import { buildSystemPrompt, cleanVisitorName, MEL_MAX_MESSAGE, parseMelReply, sanitizeHistory, type MelReply } from "@/lib/mel-prompt";
+import { clientReferralLink } from "@/lib/public-data";
+import { isAnonymizedPhone, normalizeBrazilPhone } from "@/lib/phone";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { formatLongDate, localToUtcIso, todayKey } from "@/lib/format";
@@ -14,6 +16,9 @@ const inputSchema = z.object({
   slug: z.string().trim().min(1).max(60),
   message: z.string().trim().min(1, "Escreva sua dúvida").max(MEL_MAX_MESSAGE, "Mensagem muito longa"),
   history: z.unknown(),
+  visitorName: z.string().max(60).optional().nullable(),
+  newsletterOffered: z.boolean().optional().default(false),
+  subscribed: z.boolean().optional().default(false),
 });
 
 export type MelResult = { ok: true; reply: MelReply } | { ok: false; error: string; reply?: MelReply };
@@ -106,6 +111,7 @@ export async function askMelAction(input: z.input<typeof inputSchema>): Promise<
     extraInfo: assistant.extra_info,
     siteUrl: SITE_URL,
     bookingPath: `/agendar/${business.slug}`,
+    referral: data.referral,
   });
   const system = buildSystemPrompt({
     name: assistant.name,
@@ -115,6 +121,10 @@ export async function askMelAction(input: z.input<typeof inputSchema>): Promise<
     avoidTopics: assistant.avoid_topics,
     knowledge,
     today: formatLongDate(new Date(), tz),
+    visitorName: cleanVisitorName(p.data.visitorName),
+    referralEnabled: Boolean(data.referral),
+    newsletterOffered: p.data.newsletterOffered,
+    subscribed: p.data.subscribed,
   });
   const raw = await callOpenAI(assistant.model, system, history, message);
   const reply = parseMelReply(raw);
@@ -122,4 +132,42 @@ export async function askMelAction(input: z.input<typeof inputSchema>): Promise<
 
   await db.from("assistant_logs").insert({ business_id: business.id, question: maskPersonal(message), answered: reply.answered });
   return { ok: true, reply };
+}
+
+const referralSchema = z.object({
+  slug: z.string().trim().min(1).max(60),
+  phone: z.string().trim().min(8, "Informe seu WhatsApp").max(30),
+  email: z.string().trim().toLowerCase().pipe(z.email("Confira o e-mail")),
+});
+
+export type MelReferralResult = { ok: true; link: string; firstName: string } | { ok: false; error: string; notFound?: boolean };
+
+/**
+ * Programa de indicação pela assistente: a cliente informa o WhatsApp E o e-mail do cadastro
+ * (os mesmos usados para aplicar o desconto automaticamente) e recebe o link pessoal dela.
+ * A mensagem de erro é a mesma para qualquer dado que não confira (não revela quem é cliente).
+ */
+export async function melReferralLinkAction(input: z.input<typeof referralSchema>): Promise<MelReferralResult> {
+  const p = referralSchema.safeParse(input);
+  if (!p.success) return { ok: false, error: p.error.issues[0]?.message ?? "Confira os dados." };
+  if (!(await checkRateLimit("mel-indicacao", 6, 600))) return { ok: false, error: "Muitas tentativas. Tente de novo em alguns minutos." };
+  const phone = normalizeBrazilPhone(p.data.phone);
+  if (!phone) return { ok: false, error: "Confira o número de WhatsApp (com DDD)." };
+  const business = await getPublicBusiness(p.data.slug);
+  if (!business) return { ok: false, error: "Indisponível no momento." };
+  const { data: client } = await createServiceClient()
+    .from("clients")
+    .select("id, full_name, email, phone, blocked_at")
+    .eq("business_id", business.id)
+    .eq("phone", phone)
+    .maybeSingle();
+  const notFound: MelReferralResult = {
+    ok: false,
+    notFound: true,
+    error: "Não encontrei um cadastro com esse WhatsApp e esse e-mail juntos. Use os mesmos dados do seu agendamento.",
+  };
+  if (!client || client.blocked_at || isAnonymizedPhone(client.phone) || (client.email ?? "").trim().toLowerCase() !== p.data.email) return notFound;
+  const link = await clientReferralLink(business.id, client.id, SITE_URL);
+  if (!link) return { ok: false, error: "O programa de indicação não está ativo no momento." };
+  return { ok: true, link, firstName: (client.full_name as string).split(" ")[0] };
 }

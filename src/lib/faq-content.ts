@@ -156,6 +156,7 @@ export function assistantKnowledge(input: {
   extraInfo: string | null;
   siteUrl: string;
   bookingPath: string;
+  referral?: { rewardLabel: string; friendLabel: string | null; validDays: number | null } | null;
 }) {
   const { business, settings, services, faq } = input;
   const lines: string[] = [];
@@ -167,6 +168,9 @@ export function assistantKnowledge(input: {
   const ig = instagramHandle(business.instagram_url);
   if (ig) lines.push(`Instagram: ${ig}`);
   lines.push(`Agendamento online: ${settings?.online_enabled ? `${input.siteUrl}${input.bookingPath}` : "desativado no momento"}`);
+  lines.push(
+    "Quem já agendou consulta, remarca ou cancela pelo link recebido no e-mail de confirmação ou na página “Consultar meu agendamento” (botão \"consultar\"), informando o e-mail ou WhatsApp e o nome completo usados no agendamento.",
+  );
 
   lines.push("\n# Serviços (preço e duração)");
   for (const s of services) {
@@ -208,6 +212,13 @@ export function assistantKnowledge(input: {
   if (published.length) {
     lines.push("\n# Perguntas frequentes (respostas do studio)");
     for (const f of published) lines.push(`P: ${f.question.trim()}\nR: ${f.answer.trim()}`);
+  }
+  if (input.referral) {
+    const r = input.referral;
+    lines.push("\n# Programa de indicação");
+    lines.push(
+      `Cada cliente tem um link pessoal de indicação (o botão "indicar" gera o link: ela informa o WhatsApp e o e-mail do cadastro). A amiga indicada precisa ser cliente nova (WhatsApp e e-mail ainda não cadastrados)${r.friendLabel ? ` e ganha ${r.friendLabel} no primeiro agendamento` : ""}. Quando a amiga for atendida, quem indicou ganha ${r.rewardLabel} no próximo agendamento online, aplicado automaticamente ao agendar com o mesmo WhatsApp e e-mail do cadastro${r.validDays ? ` (válido por ${r.validDays} dias)` : ""}. Não acumula com cupom e ninguém indica a si mesma.`,
+    );
   }
   if (input.extraInfo?.trim()) lines.push(`\n# Informações extras\n${input.extraInfo.trim()}`);
   return lines.join("\n");

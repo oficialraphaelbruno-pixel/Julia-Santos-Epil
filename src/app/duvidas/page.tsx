@@ -158,6 +158,8 @@ export default async function FaqPage() {
           slug={business.slug}
           name={assistant.name}
           welcome={assistant.welcome}
+          services={assistant.services}
+          referral={assistant.referral}
           bookingHref={settings?.online_enabled ? bookingHref : null}
           whatsappHref={wa}
           instagramHref={business.instagram_url}

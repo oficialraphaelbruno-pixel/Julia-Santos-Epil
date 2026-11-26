@@ -74,7 +74,7 @@ export function AssistantSettingsForm({
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <span className="grid size-20 shrink-0 place-items-center rounded-full bg-cream ring-2 ring-champagne/60">
-          <Image src="/brand/mel-avatar.webp" alt="Avatar da assistente" width={80} height={80} className="size-[72px] object-contain" />
+          <Image src="/brand/mel-avatar-v2.webp" alt="Avatar da assistente" width={80} height={80} className="size-[72px] object-contain" />
         </span>
         <div className="flex-1">
           <p className="font-display text-xl text-ink">{name || "Assistente"}</p>
