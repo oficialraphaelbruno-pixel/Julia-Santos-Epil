@@ -48,10 +48,29 @@ Ela **não inventa**: se não estiver cadastrado, diz que não sabe e oferece o 
 - Cada mensagem envia para a OpenAI as informações do studio (cerca de 4 a 6 mil "tokens"). Confira os preços atuais em https://openai.com/api/pricing. Com um modelo "mini", o custo por mensagem fica em frações de centavo de dólar.
 - Perguntas guardadas no painel por no máximo 90 dias, sem identificar a visitante (números longos e e-mails são apagados do registro).
 
+## Crédito da OpenAI no painel
+
+A OpenAI **não oferece uma API oficial com o saldo da carteira**. Por isso, o card "Crédito da OpenAI" (painel → FAQ e assistente Mel) funciona assim:
+
+1. Sempre que abastecer, clique em **Registrar recarga** e informe o **saldo que ficou na OpenAI** (aparece em Billing) e a data.
+2. O site registra o consumo de cada mensagem da Mel (tokens) e calcula o gasto estimado a partir dessa data.
+3. **Saldo estimado = saldo informado − gasto.** Abaixo do limite escolhido (padrão US$ 2) aparece "Hora de abastecer"; ao zerar, "Crédito esgotado".
+4. O botão **Abastecer** abre a carteira da OpenAI.
+
+Opcional, para usar o gasto **real** da OpenAI em vez da estimativa:
+
+1. Na OpenAI (dono da organização): **Settings → Organization → Admin keys → Create new admin key**. Ela começa com `sk-admin-`.
+2. Na Vercel: variável `OPENAI_ADMIN_KEY` (Sensitive, Production) → Save → Redeploy.
+3. O card passa a mostrar "valor da OpenAI". Esse valor inclui tudo o que a organização gastou na OpenAI, não só a Mel.
+
+A chave de administrador dá acesso amplo à organização: guarde só na Vercel e nunca compartilhe.
+
+Preços usados na estimativa (editáveis pelo administrador geral): US$ 0,15 por milhão de tokens de entrada e US$ 0,60 de saída (gpt-4o-mini). Confira em https://openai.com/api/pricing se trocar de modelo.
+
 ## Teste local
 
 O teste `npm run test:e2e:faq-mel` usa uma OpenAI simulada. Inicie o site com:
 
 ```
-OPENAI_API_KEY=teste-local OPENAI_BASE_URL=http://127.0.0.1:4555/v1 npm start
+OPENAI_API_KEY=teste-local OPENAI_ADMIN_KEY=teste-admin OPENAI_BASE_URL=http://127.0.0.1:4555/v1 npm start
 ```

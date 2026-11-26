@@ -170,3 +170,47 @@ export async function dismissAssistantQuestionAction(id: number): Promise<Action
     return { ok: false, error: e instanceof Error ? e.message : "Erro." };
   }
 }
+
+const money = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/\s|US\$|\$/g, "").replace(",", "."))
+  .pipe(z.string().regex(/^\d{1,6}(\.\d{1,4})?$/, "Valor inválido"))
+  .transform(Number);
+
+const creditSchema = z.object({
+  creditUsd: z.union([money, z.literal("")]),
+  creditSince: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"), z.literal("")]),
+  lowBalanceUsd: money,
+  priceInput: money.optional(),
+  priceOutput: money.optional(),
+});
+export type AssistantCreditInput = z.input<typeof creditSchema>;
+
+/** Crédito colocado na OpenAI (para calcular o saldo) e, só para o administrador geral, preços por milhão de tokens. */
+export async function saveAssistantCreditAction(input: AssistantCreditInput): Promise<ActionResult> {
+  try {
+    const ctx = await assertAdmin({ owner: true, area: "assistente" });
+    const p = creditSchema.safeParse(input);
+    if (!p.success) return { ok: false, error: "Confira os campos.", fieldErrors: zodFieldErrors(p.error.issues) };
+    const v = p.data;
+    if ((v.creditUsd === "") !== (v.creditSince === "")) {
+      return { ok: false, error: "Informe o valor e a data da recarga.", fieldErrors: { [v.creditUsd === "" ? "creditUsd" : "creditSince"]: "Obrigatório" } };
+    }
+    const row: Record<string, unknown> = {
+      credit_usd: v.creditUsd === "" ? null : v.creditUsd,
+      credit_since: v.creditSince || null,
+      low_balance_usd: v.lowBalanceUsd,
+    };
+    if (ctx.isPlatformAdmin) {
+      if (v.priceInput !== undefined) row.price_input_per_m = v.priceInput;
+      if (v.priceOutput !== undefined) row.price_output_per_m = v.priceOutput;
+    }
+    const { error } = await ctx.supabase.from("assistant_settings").update(row).eq("business_id", ctx.business.id);
+    if (error) return { ok: false, error: friendlyDbError(error.message) };
+    revalidatePath("/admin/assistente");
+    return { ok: true, message: "Crédito atualizado." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro ao salvar." };
+  }
+}

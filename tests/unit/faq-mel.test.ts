@@ -146,3 +146,20 @@ describe("Nome da visitante na Mel", () => {
     expect(buildSystemPrompt({ ...base, referralEnabled: false })).not.toContain('"indicar"');
   });
 });
+
+describe("Crédito da OpenAI", () => {
+  it("estima o custo pelos tokens e calcula o saldo e os alertas", async () => {
+    const { estimateCostUsd, sumUsage, creditStatus, formatUsd } = await import("@/lib/credit");
+    expect(estimateCostUsd(1_000_000, 1_000_000, 0.15, 0.6)).toBeCloseTo(0.75);
+    const rows = [
+      { day: "2026-11-20", messages: 2, prompt_tokens: 10000, completion_tokens: 400 },
+      { day: "2026-11-26", messages: 3, prompt_tokens: 15000, completion_tokens: 600 },
+    ];
+    expect(sumUsage(rows, "2026-11-21")).toEqual({ messages: 3, prompt: 15000, completion: 600 });
+    expect(creditStatus({ creditUsd: 10, spentUsd: 1, lowBalanceUsd: 2 })).toMatchObject({ balance: 9, level: "ok" });
+    expect(creditStatus({ creditUsd: 10, spentUsd: 8.5, lowBalanceUsd: 2 }).level).toBe("low");
+    expect(creditStatus({ creditUsd: 10, spentUsd: 12, lowBalanceUsd: 2 })).toMatchObject({ level: "empty", percentLeft: 0 });
+    expect(creditStatus({ creditUsd: null, spentUsd: 1, lowBalanceUsd: 2 }).level).toBe("unknown");
+    expect(formatUsd(8.5)).toBe("US$ 8,50");
+  });
+});

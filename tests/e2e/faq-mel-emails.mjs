@@ -31,7 +31,32 @@ async function step(id, name, fn) {
 
 // ---------- OpenAI simulada ----------
 let lastRequest = null;
+let costsMode = "fail"; // "fail" = chave de administrador recusada; "ok" = devolve gasto real
+let costsCalls = 0;
 const mock = createServer((req, res) => {
+  if (req.url.startsWith("/v1/organization/costs")) {
+    costsCalls++;
+    if (costsMode === "fail" || req.headers.authorization !== "Bearer teste-admin") {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: { message: "invalid admin key" } }));
+    }
+    const url = new URL(req.url, "http://x");
+    const page2 = url.searchParams.get("page") === "p2";
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(
+      JSON.stringify({
+        object: "page",
+        data: page2
+          ? [{ object: "bucket", results: [{ object: "organization.costs.result", amount: { value: 0.25, currency: "usd" } }] }]
+          : [
+              { object: "bucket", results: [{ object: "organization.costs.result", amount: { value: 0.6, currency: "usd" } }] },
+              { object: "bucket", results: [{ object: "organization.costs.result", amount: { value: 0.4, currency: "usd" } }] },
+            ],
+        has_more: !page2,
+        next_page: page2 ? null : "p2",
+      }),
+    );
+  }
   let body = "";
   req.on("data", (c) => (body += c));
   req.on("end", () => {
@@ -44,7 +69,7 @@ const mock = createServer((req, res) => {
     if (last.includes("já tenho um agendamento")) reply = { resposta: "Você consulta, remarca ou cancela pela página de consulta 💛 Posso te ajudar em algo mais?", respondeu: true, acoes: ["consultar"] };
     if (last.includes("estacionamento")) reply = { resposta: "Essa eu não sei, flor. Fala com a Julia no WhatsApp?", respondeu: false, acoes: ["whatsapp"] };
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ choices: [{ message: { role: "assistant", content: JSON.stringify(reply) } }] }));
+    res.end(JSON.stringify({ choices: [{ message: { role: "assistant", content: JSON.stringify(reply) } }], usage: { prompt_tokens: 5000, completion_tokens: 200 } }));
   });
 });
 await new Promise((r) => mock.listen(4555, "127.0.0.1", r));
@@ -54,7 +79,8 @@ sql("delete from rate_limits");
 const stamp = Date.now().toString().slice(-5);
 const biz = sql(`select id from businesses where slug='julia-santos-epil'`);
 sql(`update business_members set permissions='{}' where business_id='${biz}'`);
-sql(`update assistant_settings set enabled=false, daily_limit=300 where business_id='${biz}'`);
+sql(`update assistant_settings set enabled=false, daily_limit=300, credit_usd=null, credit_since=null, low_balance_usd=2 where business_id='${biz}'`);
+sql(`delete from assistant_usage_daily where business_id='${biz}'`);
 sql(`delete from assistant_logs where business_id='${biz}'`);
 sql(`insert into services (business_id, name, price_cents, duration_minutes, pre_care_text, post_care_text) values
      ('${biz}', 'Virilha ${stamp}', 6000, 40, 'Antes ${stamp}: não depile com lâmina 15 dias antes.', 'Depois ${stamp}: evite piscina por 24h.')`);
@@ -271,6 +297,44 @@ await step("M5", "Programa de indicação pela Mel: cliente informa WhatsApp + e
   return url.replace(BASE, "");
 });
 
+await step("C1", "Crédito: cada mensagem registra o consumo; Julia informa o saldo e vê a estimativa (chave admin recusada)", async () => {
+  const tz = "America/Sao_Paulo";
+  const day = sql(`select (now() at time zone '${tz}')::date::text`);
+  const usage = sql(`select messages || '|' || prompt_tokens || '|' || completion_tokens from assistant_usage_daily where business_id='${biz}' and day='${day}'`);
+  const [msgs, pt, ct] = usage.split("|").map(Number);
+  if (!(msgs >= 3 && pt === msgs * 5000 && ct === msgs * 200)) throw new Error(`consumo: ${usage}`);
+  costsMode = "fail";
+  await ap.goto(`${BASE}/admin/assistente`);
+  const card = ap.getByTestId("credit-card");
+  if (!(await card.locator("#cr-valor").count())) await card.getByTestId("credit-editar").click();
+  await card.locator("#cr-valor").fill("10,00");
+  await card.locator("#cr-alerta").fill("2");
+  await card.getByTestId("credit-salvar").click();
+  await ap.getByText("Crédito atualizado.").waitFor();
+  const expected = 10 - (msgs * 5000 * 0.15 + msgs * 200 * 0.6) / 1e6;
+  const shown = (await card.getByTestId("credit-balance").innerText()).replace(/\s+/g, " ");
+  const want = `US$ ${expected.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (!shown.includes(want) || !shown.includes("estimativa")) throw new Error(`saldo: ${shown} (esperado ${want})`);
+  await card.getByText("chave de administrador recusada").waitFor();
+  if (await card.getByTestId("credit-alert").count()) throw new Error("alerta com saldo alto");
+  return `${msgs} mensagens, saldo ${want}`;
+});
+
+await step("C2", "Com a chave de administrador, o gasto vem da OpenAI e o aviso “Hora de abastecer” aparece", async () => {
+  costsMode = "ok";
+  sql(`update assistant_settings set credit_usd=2.00, low_balance_usd=1.5 where business_id='${biz}'`);
+  await ap.goto(`${BASE}/admin/assistente`);
+  const card = ap.getByTestId("credit-card");
+  const shown = (await card.getByTestId("credit-balance").innerText()).replace(/\s+/g, " ");
+  if (!shown.includes("US$ 0,75") || !shown.includes("valor da OpenAI")) throw new Error(`saldo: ${shown}`);
+  await card.getByTestId("credit-alert").getByText("Hora de abastecer").waitFor();
+  await card.screenshot({ path: "tests/e2e/screenshots/credito-openai.png" });
+  sql(`update assistant_settings set credit_usd=1.00 where business_id='${biz}'`);
+  await ap.reload();
+  await ap.getByTestId("credit-alert").getByText("Crédito esgotado").waitFor();
+  return "gasto real US$ 1,25 (2 páginas); alertas de saldo baixo e esgotado";
+});
+
 await step("M6", "Limite diário protege o crédito da OpenAI", async () => {
   sql(`update assistant_settings set daily_limit=10 where business_id='${biz}'`);
   sql(`insert into assistant_logs (business_id, question) select '${biz}', 'x' from generate_series(1,10)`);
@@ -289,7 +353,8 @@ await step("M6", "Limite diário protege o crédito da OpenAI", async () => {
 
 // limpeza
 sql(`update booking_settings set pix_key=nullif('${pixBefore[0]}',''), pix_key_type=nullif('${pixBefore[1]}','') where business_id='${biz}'`);
-sql(`update assistant_settings set enabled=false, daily_limit=300 where business_id='${biz}'`);
+sql(`update assistant_settings set enabled=false, daily_limit=300, credit_usd=null, credit_since=null, low_balance_usd=2 where business_id='${biz}'`);
+sql(`delete from assistant_usage_daily where business_id='${biz}'`);
 sql(`delete from assistant_logs where business_id='${biz}'`);
 sql(`delete from faq_items where business_id='${biz}' and (question like '%${stamp}%' or answer like '%vaga na rua%')`);
 sql(`update services set status='archived' where name='Virilha ${stamp}'`);

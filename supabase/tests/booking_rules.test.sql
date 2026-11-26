@@ -463,6 +463,10 @@ begin
     raise exception 'FALHOU: aceitou e-mail inválido';
   exception when others then assert sqlerrm = 'EMAIL_INVALIDO', sqlerrm; end;
   assert (select not enabled and name = 'Mel' from public.assistant_settings where business_id = '00000000-0000-0000-0000-00000000000a'), 'assistente deveria começar desligada';
+  perform public.record_assistant_usage('00000000-0000-0000-0000-00000000000a', '2026-11-26', 5000, 200);
+  perform public.record_assistant_usage('00000000-0000-0000-0000-00000000000a', '2026-11-26', 3000, 100);
+  assert (select messages = 2 and prompt_tokens = 8000 and completion_tokens = 300 from public.assistant_usage_daily
+           where business_id = '00000000-0000-0000-0000-00000000000a' and day = '2026-11-26'), 'consumo diário não somou';
   raise notice 'OK novidades: e-mail normalizado, sem duplicar, reinscrição e validação; assistente começa desligada';
 end $$;
 set local role anon;
@@ -475,6 +479,10 @@ begin
   begin
     perform public.subscribe_newsletter('00000000-0000-0000-0000-00000000000a', 'invasora@teste.local', 'site');
     raise exception 'FALHOU: visitante chamou a inscrição direto no banco';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.record_assistant_usage('00000000-0000-0000-0000-00000000000a', '2026-11-26', 1, 1);
+    raise exception 'FALHOU: visitante registrou consumo da assistente';
   exception when insufficient_privilege then null; end;
   begin
     perform 1 from public.faq_items limit 1;

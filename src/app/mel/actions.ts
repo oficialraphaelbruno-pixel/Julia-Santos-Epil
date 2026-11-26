@@ -59,8 +59,15 @@ async function callOpenAI(model: string, system: string, history: { role: string
       console.error(`[mel] OpenAI respondeu ${res.status}: ${body.slice(0, 300)}`);
       return null;
     }
-    const data = (await res.json()) as { choices?: { message?: { content?: string | null } }[] };
-    return data.choices?.[0]?.message?.content ?? null;
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string | null } }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
+    };
+    return {
+      content: data.choices?.[0]?.message?.content ?? null,
+      promptTokens: Math.max(0, Math.round(data.usage?.prompt_tokens ?? 0)),
+      completionTokens: Math.max(0, Math.round(data.usage?.completion_tokens ?? 0)),
+    };
   } catch (e) {
     console.error("[mel] falha ao chamar a OpenAI:", e instanceof Error ? e.message : e);
     return null;
@@ -126,8 +133,17 @@ export async function askMelAction(input: z.input<typeof inputSchema>): Promise<
     newsletterOffered: p.data.newsletterOffered,
     subscribed: p.data.subscribed,
   });
-  const raw = await callOpenAI(assistant.model, system, history, message);
-  const reply = parseMelReply(raw);
+  const result = await callOpenAI(assistant.model, system, history, message);
+  // consumo registrado mesmo se a resposta vier em formato inesperado (a OpenAI cobra igual)
+  if (result && (result.promptTokens || result.completionTokens)) {
+    await db.rpc("record_assistant_usage", {
+      p_business_id: business.id,
+      p_day: todayKey(tz),
+      p_prompt: result.promptTokens,
+      p_completion: result.completionTokens,
+    });
+  }
+  const reply = parseMelReply(result?.content);
   if (!reply) return { ok: false, error: "Falha temporária.", reply: OOPS };
 
   await db.from("assistant_logs").insert({ business_id: business.id, question: maskPersonal(message), answered: reply.answered });
