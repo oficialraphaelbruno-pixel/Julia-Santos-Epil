@@ -12,7 +12,7 @@ export function cleanReferralCode(raw: string | string[] | undefined | null): st
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value) return null;
   const code = value.trim().toUpperCase().replace(/\s+/g, "");
-  return /^[A-Z0-9]{4,20}$/.test(code) ? code : null;
+  return /^[A-Z0-9]{3,20}$/.test(code) ? code : null;
 }
 
 /** "10% de desconto" ou "R$ 20,00 de desconto" */

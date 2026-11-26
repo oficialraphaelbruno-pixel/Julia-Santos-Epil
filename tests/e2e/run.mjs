@@ -46,6 +46,10 @@ async function step(id, name, fn) {
 const sql = (q) => execFileSync("psql", [DB_URL, "-At", "-c", q], { encoding: "utf8" }).trim();
 const stamp = Date.now().toString().slice(-5);
 const SERVICE = `Serviço Teste ${stamp}`;
+// Ambiente local: cancela agendamentos futuros deixados por execuções anteriores destes testes
+// (os telefones fixos dos testes atingiriam o limite de agendamentos ativos por cliente).
+sql(`update appointments set status='cancelled' where starts_at > now() and status in ('pending','confirmed')
+     and client_id in (select id from clients where full_name like '%Teste')`);
 
 const browser = await chromium.launch();
 
@@ -142,7 +146,8 @@ await step("TESTE 3", "Cliente acessa a página pública e vê os serviços", as
 
 let firstTime = "";
 await step("TESTE 4/5", "Cliente escolhe data e horário livres e o agendamento é salvo no banco", async () => {
-  const { p, time } = await bookingUntilReview(cliente, { name: "Maria Teste Silva", phone: "(31) 98888-0001" });
+  // dia seguinte ao primeiro livre: no fim da tarde, "hoje" pode ter só um horário e sumir do calendário depois da reserva
+  const { p, time } = await bookingUntilReview(cliente, { name: "Maria Teste Silva", phone: "(31) 98888-0001", dayIndex: 1 });
   firstTime = time;
   await p.screenshot({ path: `${SHOTS}/mobile-agendar-revisao.png`, fullPage: true });
   await p.getByRole("button", { name: "Confirmar agendamento" }).click();
@@ -170,7 +175,7 @@ await step("TESTE 7", "Mesmo horário não pode ser reservado por outra cliente 
   const p = await c2.newPage();
   await p.goto(`${BASE}/agendar/${SLUG}`);
   await p.getByRole("button", { name: new RegExp(SERVICE) }).click();
-  await p.locator("[role=gridcell]:not([disabled])").first().click();
+  await p.locator("[role=gridcell]:not([disabled])").nth(1).click();
   const slots = p.locator("button[aria-pressed], button[aria-selected]").filter({ hasText: /^\d{2}:\d{2}$/ });
   await slots.first().waitFor();
   const times = (await slots.allTextContents()).map((t) => t.trim());
@@ -180,8 +185,8 @@ await step("TESTE 7", "Mesmo horário não pode ser reservado por outra cliente 
   // b) corrida: duas clientes confirmam o MESMO horário ao mesmo tempo
   const ca = await browser.newContext({ ...iphone, locale: "pt-BR" });
   const cb = await browser.newContext({ ...iphone, locale: "pt-BR" });
-  const A = await bookingUntilReview(ca, { name: "Ana Corrida Teste", phone: "(31) 98888-0002", dayIndex: 1 });
-  const B = await bookingUntilReview(cb, { name: "Bia Corrida Teste", phone: "(31) 98888-0003", dayIndex: 1 });
+  const A = await bookingUntilReview(ca, { name: "Ana Corrida Teste", phone: "(31) 98888-0002", dayIndex: 2 });
+  const B = await bookingUntilReview(cb, { name: "Bia Corrida Teste", phone: "(31) 98888-0003", dayIndex: 2 });
   if (A.time !== B.time) throw new Error("as duas clientes não estão no mesmo horário");
   await Promise.all([
     A.p.getByRole("button", { name: "Confirmar agendamento" }).click(),

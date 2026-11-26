@@ -344,7 +344,9 @@ select set_config('request.jwt.claims', '', true);
 update public.referral_programs set enabled = true, reward_type = 'percent', reward_value = 10, friend_type = 'percent', friend_value = 5
  where business_id = '00000000-0000-0000-0000-00000000000a';
 insert into public.clients (id, business_id, full_name, phone, email)
-values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-00000000000a', 'Márcia Indicadora', '5531944440001', 'indicadora@teste.local');
+values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-00000000000a', 'Márcia Indicadora', '5531944440001', 'indicadora@teste.local'),
+       ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-00000000000a', 'Marcia Xavier', '5531944440092', 'marcia2@teste.local'),
+       ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-00000000000a', 'Bia Lima', '5531944440093', 'bia@teste.local');
 
 do $$
 declare
@@ -352,8 +354,10 @@ declare
   v_code text; v_r record; v_a public.appointments%rowtype; v_rw public.referral_rewards%rowtype; v_p record; v_friend uuid;
 begin
   v_code := public.client_referral_code('00000000-0000-0000-0000-0000000000d1');
-  assert v_code ~ '^MARCIA[A-Z0-9]{4}$', 'código inesperado: ' || coalesce(v_code, 'nulo');
+  assert v_code = 'MARCIA', 'código inesperado: ' || coalesce(v_code, 'nulo');
   assert public.client_referral_code('00000000-0000-0000-0000-0000000000d1') = v_code, 'código mudou';
+  assert public.client_referral_code('00000000-0000-0000-0000-0000000000d2') = 'MARCIA2', 'nome repetido deveria virar MARCIA2';
+  assert public.client_referral_code('00000000-0000-0000-0000-0000000000d3') = 'BIA', 'nome de 3 letras';
   select * into v_p from public.referral_code_info('00000000-0000-0000-0000-00000000000a', lower(v_code));
   assert v_p.referrer_first_name = 'Márcia' and v_p.friend_value = 5, 'info do código errada';
 

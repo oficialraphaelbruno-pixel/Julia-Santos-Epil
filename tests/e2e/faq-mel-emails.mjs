@@ -264,7 +264,7 @@ await step("M5", "Programa de indicação pela Mel: cliente informa WhatsApp + e
   await form.getByTestId("mel-indicacao-gerar").click();
   const url = (await p.getByTestId("mel-indicacao-url").innerText()).trim();
   const code = sql(`select referral_code from clients where id='${gid}'`);
-  if (!code.startsWith("GABRIELA") || !url.endsWith(`/indicacao/${code}`)) throw new Error(`link ${url} / código ${code}`);
+  if (!/^GABRIELA\d*$/.test(code) || !url.endsWith(`/indicacao/${code.toLowerCase()}`)) throw new Error(`link ${url} / código ${code}`);
   await p.screenshot({ path: "tests/e2e/screenshots/mel-indicacao.png" });
   await ctx.close();
   sql(`update referral_programs set enabled=false where business_id='${biz}'`);

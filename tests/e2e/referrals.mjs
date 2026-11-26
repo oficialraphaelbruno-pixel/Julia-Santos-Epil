@@ -73,7 +73,7 @@ let link = "";
 await step("R2", "Ficha da Ana mostra o link pessoal de indicação", async () => {
   await ap.goto(`${BASE}/admin/clientes/${anaId}`);
   link = (await ap.getByTestId("cliente-link-indicacao").innerText()).trim();
-  if (!/\/indicacao\/ANA[A-Z0-9]{4}$/.test(link)) throw new Error(`link: ${link}`);
+  if (!/\/indicacao\/ana\d*$/.test(link)) throw new Error(`link: ${link}`);
   return link;
 });
 const code = link.split("/").pop();
@@ -81,7 +81,7 @@ const code = link.split("/").pop();
 await step("R3", "O link redireciona para o agendamento com a indicação", async () => {
   const r = await ap.request.get(`${BASE}/indicacao/${code}`, { maxRedirects: 0 });
   const loc = r.headers()["location"] ?? "";
-  if (r.status() !== 307 || !loc.includes(`/agendar/julia-santos-epil?indicacao=${code}`)) throw new Error(`${r.status()} ${loc}`);
+  if (r.status() !== 307 || !loc.includes(`/agendar/julia-santos-epil?indicacao=${code.toUpperCase()}`)) throw new Error(`${r.status()} ${loc}`);
   return loc.replace(BASE, "");
 });
 
@@ -104,7 +104,9 @@ async function book(p, { name, phone, email, expectDiscount }) {
 await step("R4", "Amiga nova agenda pelo link: vê quem indicou e ganha R$ 10,00 (R$ 50 → R$ 40)", async () => {
   const ctx = await browser.newContext({ ...devices["iPhone 13"] });
   const p = await ctx.newPage();
-  await p.goto(`${BASE}/agendar/julia-santos-epil?indicacao=${code}&servico=${svc}`);
+  await p.goto(`${BASE}/indicacao/${code}`);
+  await p.waitForURL(/indicacao=/);
+  await p.goto(`${p.url()}&servico=${svc}`);
   await p.getByTestId("referral-banner").getByText("Ana").waitFor();
   await p.screenshot({ path: "tests/e2e/screenshots/indicacao-amiga.png" });
   await book(p, { name: `Amiga Indicada ${stamp}`, phone: friendPhone, email: friendEmail, expectDiscount: true });

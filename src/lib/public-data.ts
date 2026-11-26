@@ -210,5 +210,5 @@ export async function clientReferralLink(businessId: string, clientId: string, s
   const program = await getReferralProgram(businessId);
   if (!program?.enabled) return null;
   const { data } = await createServiceClient().rpc("client_referral_code", { p_client_id: clientId });
-  return typeof data === "string" && data ? `${siteUrl}/indicacao/${data}` : null;
+  return typeof data === "string" && data ? `${siteUrl}/indicacao/${data.toLowerCase()}` : null;
 }
